@@ -1,3 +1,6 @@
 # IDEA
 .idea
 .deploy_git
+
+# hexo npm modules
+node_modules
