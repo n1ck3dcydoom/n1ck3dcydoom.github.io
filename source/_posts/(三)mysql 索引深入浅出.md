@@ -1,13 +1,11 @@
 ---
-title: (三)mysql 索引深入浅出_1
+title: (三)mysql 索引深入浅出
 date: 2022-11-03 22:31:40
 index_img: /img/mysql.png
 categories:
-
-- mysql
-  tags:
-- 数据库
-
+  - mysql
+tags:
+  - 数据库
 ---
 
 ## mysql 的索引

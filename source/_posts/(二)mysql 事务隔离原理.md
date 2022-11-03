@@ -3,9 +3,9 @@ title: (二)mysql 事务隔离原理
 date: 2022-11-03 09:21:13
 index_img: /img/mysql.png
 categories:
-- mysql
-  tags:
-- 数据库
+  - mysql
+tags:
+  - 数据库
 ---
 
 ## 数据库事务的四大特性
