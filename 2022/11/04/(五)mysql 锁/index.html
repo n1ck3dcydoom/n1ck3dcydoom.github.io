@@ -1,0 +1,739 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-default-color-scheme=dark>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/logo-Linkin-Park.png">
+  <link rel="icon" href="/img/logo-Linkin-Park.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="n!Ck">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="锁锁是用来保证事务并发,数据安全的一种手段 mysql 有三种类型(注意:是 三种类型 而非 三种):  全局锁 表级锁 行级锁  全局锁全局锁就是对 整个数据库实例 加锁,在此期间,整个数据库处于 只读 状态,除了读其他所有操作都会被拒绝 全局锁的作用几乎都是用来做 整库备份, 如果在做整库备份的时候,没有加上全局锁,这个时候表仍然可以写,就会出现备份前后数据不一致的情况 在事务里面,mysql">
+<meta property="og:type" content="article">
+<meta property="og:title" content="(五)mysql 锁">
+<meta property="og:url" content="https://n1ck.cyou/2022/11/04/(%E4%BA%94)mysql%20%E9%94%81/index.html">
+<meta property="og:site_name" content="n!Ck playground">
+<meta property="og:description" content="锁锁是用来保证事务并发,数据安全的一种手段 mysql 有三种类型(注意:是 三种类型 而非 三种):  全局锁 表级锁 行级锁  全局锁全局锁就是对 整个数据库实例 加锁,在此期间,整个数据库处于 只读 状态,除了读其他所有操作都会被拒绝 全局锁的作用几乎都是用来做 整库备份, 如果在做整库备份的时候,没有加上全局锁,这个时候表仍然可以写,就会出现备份前后数据不一致的情况 在事务里面,mysql">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://n1ck.cyou/img/mysql.png">
+<meta property="article:published_time" content="2022-11-04T08:41:17.000Z">
+<meta property="article:modified_time" content="2022-11-05T03:31:57.186Z">
+<meta property="article:author" content="n!Ck">
+<meta property="article:tag" content="数据库">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://n1ck.cyou/img/mysql.png">
+  
+  
+  
+  <title>(五)mysql 锁 - n!Ck playground</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"n1ck.cyou","root":"/","version":"1.9.3","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 60vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>n!Ck playground</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                Home
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                Archives
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                Categories
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                Tags
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                About
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/page.jpeg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="(五)mysql 锁"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-11-04 16:41" pubdate>
+          November 4, 2022 pm
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          2.9k words
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          25 mins
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">(五)mysql 锁</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="锁"><a href="#锁" class="headerlink" title="锁"></a>锁</h2><p>锁是用来保证事务并发,数据安全的一种手段</p>
+<p>mysql 有三种类型(注意:是 <strong>三种类型</strong> 而非 <strong>三种</strong>):</p>
+<ol>
+<li>全局锁</li>
+<li>表级锁</li>
+<li>行级锁</li>
+</ol>
+<h3 id="全局锁"><a href="#全局锁" class="headerlink" title="全局锁"></a>全局锁</h3><p>全局锁就是对 <strong>整个数据库实例</strong> 加锁,在此期间,整个数据库处于 <strong>只读</strong> 状态,除了读其他所有操作都会被拒绝</p>
+<p>全局锁的作用几乎都是用来做 <strong>整库备份</strong>, 如果在做整库备份的时候,没有加上全局锁,这个时候表仍然可以写,就会出现备份前后数据不一致的情况</p>
+<p>在事务里面,mysql 通过 <code>MVCC</code> 多版本并发控制来保证事务的隔离性,用到的数据结构是 <code>视图</code>,这个视图保证了在启动事务的时候,是处于一个 <strong>静止状态的逻辑时间点</strong></p>
+<p>参考事务,在做全局备份的时候,也生成一张视图,这样后续的读写请求都不会因为全局锁而阻塞; 既然有视图的存在,为何备份的时候还需要全局锁呢</p>
+<p>考虑到有些存储引擎, 例如 <code>Myisam</code>, 它不支持事务; 这样在备份的时候仍然能取到最新的数据,破坏了数据的一致性</p>
+<p>还有一种方式也能够实现类似于 <strong>全局锁</strong> 的能力,那就是 <strong>将数据库设置为只读状态</strong></p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">set</span> <span class="hljs-keyword">global</span> readonly <span class="hljs-operator">=</span> <span class="hljs-literal">true</span><br></code></pre></td></tr></table></figure>
+
+<p>但是仍然不建议使用将数据库设置为只读状态来进行整库备份</p>
+<ol>
+<li>客户端连接数据库实例后,加上全局锁进行备份,如果中间发生异常导致客户端断开连接,这个时候数据库也能将全局锁自动恢复,以保证数据库实例能够继续对外提供服务</li>
+<li>如果是通过设置只读的状态,如果连接在中途断开后,数据库是不会从只读状态中恢复的,此时会导致整个数据库对外停止服务</li>
+<li>有些数据库框架可能会用 <code>readonly</code> 字段做业务逻辑,例如判断是否是主库,是否是从库; 改变这个值可能会引起主从判断的逻辑</li>
+</ol>
+<h3 id="表级锁"><a href="#表级锁" class="headerlink" title="表级锁"></a>表级锁</h3><p>表级锁有两种:</p>
+<ol>
+<li>表锁</li>
+<li>元数据锁</li>
+</ol>
+<h4 id="表锁"><a href="#表锁" class="headerlink" title="表锁"></a>表锁</h4><p>表锁的使用限制非常严格,例如</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql">lock tables t1 read, t2 write<br></code></pre></td></tr></table></figure>
+
+<p>如果线程 A 在某个时刻执行上述语句后, 其他线程写 t1 ,读写 t2 的请求都会被阻塞,这个很好理解</p>
+<p>但是对于线程 A 来说,就更加严格,它只能够读取 t1,连写 t1 都不行; 对于 t2 来说,线程 A 能够读写; 而且线程 A 也不能访问其他表</p>
+<h4 id="MDL-元数据锁"><a href="#MDL-元数据锁" class="headerlink" title="MDL 元数据锁"></a>MDL 元数据锁</h4><p><code>MDL</code> 锁是不需要显式声明的,在访问一张表的时候,数据库会自动为这张表加上 <code>MDL</code> 锁</p>
+<p>简单来说, <code>MDL</code> 锁是为了保障表结构的完整性不受到影响</p>
+<p>例如当一个线程正在查询表 A 里面的 c1,c2,c3 三列数据列,此时另外一个线程却对表 A 执行了一条 <code>alter</code> 语句,结果是删掉了 c3 列</p>
+<p>这就导致原来的线程在获取道德数据跟原来的表结构不一致了</p>
+<p>mysql 引入了 <code>MDL</code> 锁,分为 <code>MDL</code>读和写两种子类型:</p>
+<ul>
+<li>读锁之间互不影响,也就是说对于同一张表, 每个线程都可以持有对应的 <code>MDL</code> 读锁,所以每个线程之间的读请求互不受到影响</li>
+<li>写锁之间和读写锁之间互斥, 一旦有一个线程正在修改表结构,此时其他所有的读请求和写请求都会被阻塞掉,只有等待写锁释放后,才能进行后面的操作</li>
+</ul>
+<p>介绍一个由 <code>MDL</code> 锁导致的故障问题,假设有如下 4 个会话执行顺序如下:</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7tgl1480lj30j30bvdih.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
+<p>会话 A,B 分别执行查询语句,申请 <code>MDL</code> 读锁,这没问题; 会话 C 执行 <code>alert</code> 语句申请 <code>MDL</code> 写锁,此时阻塞</p>
+<p>问题来了,如果仅仅是会话 C 阻塞还好,可如果后面还有其他请求进来访问表,都会被会话 C 阻塞掉</p>
+<p>为什么说会话 C 申请写锁被阻塞之后,还会继续阻塞其他读写锁的申请呢</p>
+<p>mysql 在内部使用 <strong>优先队列</strong> 来维护所有的 <code>MDL</code> 锁申请,而且,而且 <strong>写锁的申请优先级高于读锁</strong></p>
+<p>这就解释了为什么会话 C 的写锁申请阻塞,会导致后续的读写锁申请都被阻塞: <strong>因为有一个高优先级的申请在前面,所以队列后面的请求只能一直等待即使有相同的优先级</strong></p>
+<h3 id="行级锁"><a href="#行级锁" class="headerlink" title="行级锁"></a>行级锁</h3><p><code>MDL</code> 锁是有 <code>Server</code> 层提供的能力,而行级锁是由存储引擎提供的能力,有些例如 <code>Myisa</code> 就不支持行级锁</p>
+<h4 id="两阶段锁"><a href="#两阶段锁" class="headerlink" title="两阶段锁"></a>两阶段锁</h4><p><strong>先说结论: 在 InnoDB 事务当中,行锁是在需要的时候才加上,而要等到事务提交后才释放锁, 这个叫做两阶段锁协议</strong></p>
+<p>起作用就是,当事务需要持有多把锁时,要尽可能把最可能影响并发度的锁放到后面</p>
+<p>举个简单的例子:</p>
+<ol>
+<li>客户使用账户 A 购买商家的东西,要在账户 A 上扣款</li>
+<li>商家使用账户 B 进行收款</li>
+<li>商家记录一笔交易记录</li>
+</ol>
+<p>可以看到上面的三步操作肯定是在一个事务里面执行,其中 1,2 分别是 <code>update</code> 操作,3 是 <code>insert</code> 操作,且 3 和 1,2 之前没有先后依赖关系</p>
+<p>如果这个时候有另外一个客户也在商家这里购买东西,那么这也是 <code>update</code> 操作,且和前面的 1,2 步骤 <code>update</code> 的是同一个账户</p>
+<p>为了使都操作账户 B 带来的并发等待最小,第一个客户应当对步骤进行重新排序,例如 3,1,2 这样把存在锁竞争的步骤 2 放到了最后面,这样第一个客户持有账户 B 的锁时间被降低到了最短,尽可能地降低锁导致的并发问题的影响</p>
+<h4 id="死锁"><a href="#死锁" class="headerlink" title="死锁"></a>死锁</h4><p>什么是死锁: 当并发系统中几个线程出现 <strong>循环等待</strong> 资源,涉及到的线程都在等待别人释放自己需要的资源,且 <strong>一直等待</strong> 下去的现象,称为死锁</p>
+<p>死锁发生的 3 个必要条件:</p>
+<ol>
+<li>互斥条件:一个资源只能被一个线程使用,其他线程只能等待释放</li>
+<li>请求和保持:一个线程请求其他互斥资源时,不会释放自己手里的资源</li>
+<li>不可抢占:线程不能强行从其他线程那里获取自己需要的资源,只能等待其释放</li>
+<li>循环等待:存在循环链,使得每个线程都在等待别人释放自己需要的资源</li>
+</ol>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7tgkpg18ij30jh0c6juh.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
+<p>可以看到事务 A 启动后申请对 id&#x3D;1 的资源的锁,事务 B 启动后申请对 id&#x3D;2 的资源的锁</p>
+<p>然后事务 A 申请 id&#x3D;2 的锁,发现被事务 B 持有,此时事务 A 阻塞等待事务 B 释放 id&#x3D;2 的锁</p>
+<p>接着事务 B 申请 id&#x3D;1 的锁,发现被事务 A 持有,此时事务 B 阻塞等待事务 A 释放 id&#x3D;1 的锁</p>
+<p>这样两个事务都在等待对方释放自己的资源,进入死锁状态</p>
+<h4 id="mysql-如何解决死锁"><a href="#mysql-如何解决死锁" class="headerlink" title="mysql 如何解决死锁"></a>mysql 如何解决死锁</h4><ol>
+<li>超时等待</li>
+</ol>
+<p>mysql 有个超时等待时间,默认值为 50s,意味着一个线程进入等待后 50s 没有拿到资源,就放弃等待</p>
+<p>50s 的等待时长一般难以接受,太小的话容易误伤正常的锁等待,所以这个策略很少使用</p>
+<ol start="2">
+<li>主动死锁检测</li>
+</ol>
+<p>当一个事务发生等待时,会主动检测事务所依赖的所有线程是否有被其他线程锁住,以此循环下去最后判断是否出现了死锁</p>
+<p>主动死锁检测虽然可以发现死锁,但是也存在性能问题</p>
+<p>假如有 100 个线程同时更新 1 个资源,第一个拿到锁的线程开始处理,后面每个进来的新线程都要等待第一个线程释放锁,每个线程都要做一次死锁检测,而每次都会循环检查其他的线程,相当于最后产生了 10000 次死锁检查</p>
+<p>最终的检测结果是没有发生死锁,但是这个过程却是相当耗费 cpu 资源的</p>
+<h4 id="如何减少主动死锁检测带来的-cpu-性能消耗问题"><a href="#如何减少主动死锁检测带来的-cpu-性能消耗问题" class="headerlink" title="如何减少主动死锁检测带来的 cpu 性能消耗问题"></a>如何减少主动死锁检测带来的 cpu 性能消耗问题</h4><p>对于这种 <strong>热点数据</strong> 的并发更新,死锁检测往往会占用大量的 cpu 资源</p>
+<ol>
+<li>从源头上控制,假如能够限制客户端的并发,例如一个客户端发起 5 个链接,那么死锁检测的成本就很低能够接受</li>
+</ol>
+<p>但是难以避免出现大量客户端发起连接更新热点数据,即使单个客户端的并发数很小,但是客户端数量过多仍然会导致死锁检测耗费大量 cpu 资源</p>
+<ol start="2">
+<li>在业务上做出拆分,将原来一整块的并发资源,拆分为多个子集</li>
+</ol>
+<p>例如原来的一个账户,拆分为 100 个账户的总和,每次更新总账户的时候,实际上是随机更新一个子账户</p>
+<p>这样可以将一个资源面临的大量访问均分到多个资源上,减少单个资源的并发度,降低死锁检测的 cpu 消耗</p>
+<p>但是这样要考虑如何汇总零散的资源,以及单个资源的上出现的特殊情况,这样的做法会导致业务的复杂程度变高</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/mysql/" class="category-chain-item">mysql</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/">#数据库</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>(五)mysql 锁</div>
+      <div>https://n1ck.cyou/2022/11/04/(五)mysql 锁/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>Author</div>
+          <div>n!Ck</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>Posted on</div>
+          <div>November 4, 2022</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>Licensed under</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - Attribution">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/11/05/(%E5%85%AD)mysql%20%E5%88%B7%E7%9B%98%E6%9C%BA%E5%88%B6/" title="(六)mysql 刷盘机制">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">(六)mysql 刷盘机制</span>
+                        <span class="visible-mobile">Previous</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/11/03/(%E5%9B%9B)mysql%20%E7%9A%84%E5%90%84%E7%A7%8D%E7%BC%93%E5%AD%98%E6%8A%80%E6%9C%AF/" title="(四)mysql 的各种缓存技术">
+                        <span class="hidden-mobile">(四)mysql 的各种缓存技术</span>
+                        <span class="visible-mobile">Next</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;Table of Contents</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Search</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">Keyword</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">Blog works best with JavaScript enabled</div>
+  </noscript>
+</body>
+</html>

@@ -1,0 +1,714 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-default-color-scheme=dark>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/logo-Linkin-Park.png">
+  <link rel="icon" href="/img/logo-Linkin-Park.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="n!Ck">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="走进 Gin 的大门启动 gin 服务启动 gin 服务很简单,代码里面只需要两行 12345678910package mainimport (	&quot;github.com&#x2F;gin-gonic&#x2F;gin&quot;)func main() &amp;#123;	r :&#x3D; gin.Default()	r.Run() &#x2F;&#x2F; listen and serve on 0.0.0.0:8080 (for wi">
+<meta property="og:type" content="article">
+<meta property="og:title" content="gin 源码解读 (一)">
+<meta property="og:url" content="https://n1ck.cyou/2022/10/28/gin%E6%BA%90%E7%A0%81%E8%A7%A3%E8%AF%BB(%E4%B8%80)/index.html">
+<meta property="og:site_name" content="n!Ck playground">
+<meta property="og:description" content="走进 Gin 的大门启动 gin 服务启动 gin 服务很简单,代码里面只需要两行 12345678910package mainimport (	&quot;github.com&#x2F;gin-gonic&#x2F;gin&quot;)func main() &amp;#123;	r :&#x3D; gin.Default()	r.Run() &#x2F;&#x2F; listen and serve on 0.0.0.0:8080 (for wi">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://n1ck.cyou/img/gin.png">
+<meta property="article:published_time" content="2022-10-27T18:14:31.000Z">
+<meta property="article:modified_time" content="2022-11-05T03:31:57.186Z">
+<meta property="article:author" content="n!Ck">
+<meta property="article:tag" content="源码">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://n1ck.cyou/img/gin.png">
+  
+  
+  
+  <title>gin 源码解读 (一) - n!Ck playground</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"n1ck.cyou","root":"/","version":"1.9.3","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 60vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>n!Ck playground</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                Home
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                Archives
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                Categories
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                Tags
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                About
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/page.jpeg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="gin 源码解读 (一)"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-10-28 02:14" pubdate>
+          October 28, 2022 am
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          3k words
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          26 mins
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">gin 源码解读 (一)</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="走进-Gin-的大门"><a href="#走进-Gin-的大门" class="headerlink" title="走进 Gin 的大门"></a>走进 Gin 的大门</h2><h3 id="启动-gin-服务"><a href="#启动-gin-服务" class="headerlink" title="启动 gin 服务"></a>启动 gin 服务</h3><p>启动 gin 服务很简单,代码里面只需要两行</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">package</span> main<br><br><span class="hljs-keyword">import</span> (<br>	<span class="hljs-string">&quot;github.com/gin-gonic/gin&quot;</span><br>)<br><br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">main</span><span class="hljs-params">()</span></span> &#123;<br>	r := gin.Default()<br>	r.Run() <span class="hljs-comment">// listen and serve on 0.0.0.0:8080 (for windows &quot;localhost:8080&quot;)</span><br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>跟进 <code>r.Run()</code> 方法一探究竟</p>
+<h3 id="Run-方法"><a href="#Run-方法" class="headerlink" title="Run() 方法"></a>Run() 方法</h3><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7kefvpgnuj30m709ljx3.jpg" srcset="/img/loading.gif" lazyload alt="img01.png"></p>
+<p>可以看到 <code>Run()</code> 方法大概做了 3 件事</p>
+<ol>
+<li>解析配置的受信任 CIDRs 地址</li>
+<li>如果有在启动时指定监听的地址,就解析对应 <code>addr</code> 地址</li>
+<li>传入解析后的 <code>addr</code> 地址,并监听这个地址上的 http 事件</li>
+</ol>
+<p>通过上面的注释可知,其本质是 <code>http.ListenAndServe(addr, router)</code> 的一个实现</p>
+<p>且 <code>Run()</code> 方法是一个阻塞方法,将会阻塞调用协程,除非异常发生</p>
+<p>了解过 <code>Socket</code> 编程的应该都知道, <code>socket.Accept()</code> 就是一个阻塞方法,它会一直阻塞监听套接字绑定的 ip 和端口,直到收到请求数据才返回</p>
+<p>可见 <code>http.ListenAndServe()</code> 也是一直阻塞并监听端口事件发生的</p>
+<h3 id="http-ListenAndServe"><a href="#http-ListenAndServe" class="headerlink" title="http.ListenAndServe"></a>http.ListenAndServe</h3><p>这是 gin 的核心函数,其依赖于 go 语言内置的 <code>net</code> 库实现</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7kefvnvo2j30ir06ladw.jpg" srcset="/img/loading.gif" lazyload alt="img02.png"></p>
+<p>注意,外面传入的是 <code>gin.engine</code> 到这里变成了 go 语言 <code>net</code> 库的 <code>Handler</code> 接口对象</p>
+<p>可以看到的是 <code>gin.engine</code> 是实现了 <code>Hanler</code> 接口的</p>
+<p>并且后续所有的 <code>request</code> 请求和 <code>response</code> 响应也都是通过这个 <code>Handler</code> 接口实现的</p>
+<h3 id="gin-如何通过-Handler-接口实现接收和响应请求的"><a href="#gin-如何通过-Handler-接口实现接收和响应请求的" class="headerlink" title="gin 如何通过 Handler 接口实现接收和响应请求的"></a>gin 如何通过 Handler 接口实现接收和响应请求的</h3><p>跟进 <code>Handler</code> 接口,找到对应的 gin 实现 engine 对象</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7kefvra9xj30jf06w42g.jpg" srcset="/img/loading.gif" lazyload alt="img03.png"></p>
+<p><code>engin.pool.Get()</code> 获取一个 gin 自己封装的 <code>Context</code> 对象,注意这里不是 go 原生的 <code>Context</code> 对象</p>
+<p>可以看到 gin 使用了池化技术,做到内存复用,避免频繁的创建上下文</p>
+<p>初始化 <code>Context</code> 对象时,把接收到的请求 <code>req</code> 也放到上下文里</p>
+<p>进一步跟进 <code>handleHTTPRequest()</code> 函数看看 gin 究竟是如何处理请求的</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">package</span> gin<br><br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(engine *Engine)</span></span> handleHTTPRequest(c *Context) &#123;<br>	httpMethod := c.Request.Method <span class="hljs-comment">// 解析 method</span><br>	rPath := c.Request.URL.Path    <span class="hljs-comment">// 解析 url path</span><br>	unescape := <span class="hljs-literal">false</span><br>	<span class="hljs-comment">// &#123;一些对 url path 的额外处理&#125;</span><br><br>	<span class="hljs-comment">// gin 维护了所有 method 的路由树集合</span><br>	t := engine.trees<br>	<span class="hljs-keyword">for</span> i, tl := <span class="hljs-number">0</span>, <span class="hljs-built_in">len</span>(t); i &lt; tl; i++ &#123;<br>		<span class="hljs-comment">// 遍历路由树集合找到当前 method 对应的的路由树</span><br>		<span class="hljs-keyword">if</span> t[i].method != httpMethod &#123;<br>			<span class="hljs-keyword">continue</span><br>		&#125;<br>		root := t[i].root<br>		<span class="hljs-comment">// 从 root 节点开始查找路由树,直到查找到 path 对应的路由</span><br>		value := root.getValue(rPath, c.params, unescape)<br>		<span class="hljs-keyword">if</span> value.params != <span class="hljs-literal">nil</span> &#123;<br>			c.Params = *value.params<br>		&#125;<br>		<span class="hljs-comment">// 如果路由有配置 handler 函数</span><br>		<span class="hljs-keyword">if</span> value.handlers != <span class="hljs-literal">nil</span> &#123;<br>			c.handlers = value.handlers<br>			c.fullPath = value.fullPath<br>			<span class="hljs-comment">// Next() 函数会依次执行路由配置的所有 handler 函数</span><br>			c.Next()<br>			c.writermem.WriteHeaderNow()<br>			<span class="hljs-keyword">return</span><br>		&#125;<br>		<span class="hljs-comment">// &#123;后续处理&#125;</span><br>	&#125;<br>	<span class="hljs-comment">// &#123;后续处理&#125;</span><br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>这里有两个关键点 <code>engine.trees</code> 路由树 和 <code>Next()</code> 函数</p>
+<h3 id="先来看-Next-函数"><a href="#先来看-Next-函数" class="headerlink" title="先来看 Next() 函数"></a>先来看 Next() 函数</h3><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7kefvsw2xj30io05y0vq.jpg" srcset="/img/loading.gif" lazyload alt="img04.png"></p>
+<p>还记得之前的 <code>gin.engine</code> 对象吗? <code>engine</code> 实现了 <code>ServeHTTP</code> 接口,在里面封装了 gin 关于 http 请求的处理</p>
+<p>其中 <code>c.reset()</code> 初始化 <code>Context</code> 上下文对象的时候,有设置 index 的值为 -1</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7kefvmytfj309203fgm8.jpg" srcset="/img/loading.gif" lazyload alt="img05.png"></p>
+<p>这说明还没有 <code>handler</code> 函数处理的时候,<code>Context</code> 上下文里面保存的处理索引是从 <code>-1</code> 开始计算</p>
+<p><code>Next()</code> 函数里,一来就让 index 自增 <code>c.index++</code> 后 index &#x3D; 0,说明从第 0 个 <code>handler</code> 函数开始依次执行</p>
+<p>而 <code>handleHTTPRequest()</code> 函数在从路由树当中找到请求对应的路由节点后,如果发现这个路由有配置过 <code>handler</code> 函数,则会把路由配置的 <code>handler</code> 函数全部赋值给 <code>Context</code> 上下文 <code>c</code> 里</p>
+<p>这样就相当于通过上下文 <code>c</code> 依次执行路由配置的 <code>handler</code> 函数处理请求,而每次执行 <code>handler</code> 之后,都会使 <code>index</code> 自增</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">package</span> gin<br><br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(c *Context)</span></span> Next() &#123;<br>	<span class="hljs-comment">// 关注核心代码</span><br>	c.handlers[c.index](c)<br>	<span class="hljs-comment">// c.index 表示当前待执行的索引</span><br>	<span class="hljs-comment">// c.handlers[] 数组</span><br>	<span class="hljs-comment">// c.handlers[c.index] 相当于取出处于 index 的 handler 函数</span><br>	<span class="hljs-comment">// 而 handler 函数的签名是 func (c *Context)</span><br>	<span class="hljs-comment">// 可以理解为 c.handlers[c.index] = func (c *Context)</span><br>	<span class="hljs-comment">// 所以 c.handlers[c.index](c) 相当于把 c 又当做参数传给了 handler 函数</span><br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>除非设置了 <code>AbortIndex</code> 的值终止 <code>handlers</code> 的遍历,否则会执行完所有配置的 <code>handlers</code> 函数才会结束请求的处理</p>
+<h3 id="engine-trees-路由树"><a href="#engine-trees-路由树" class="headerlink" title="engine.trees 路由树"></a>engine.trees 路由树</h3><p>接下来在看看路由树的是怎么实现的</p>
+<p>一路跟进去看源码</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7kefvmodrj308903yq3f.jpg" srcset="/img/loading.gif" lazyload alt="img06.png"></p>
+<p>可以看到 gin 维护了一个 <code>[]methodTree</code> 数组,数组里面每个元素都是一个路由树节点对象,分别保存了当前路由的方法 <code>method</code> 和当前路由的根节点 <code>root</code></p>
+<p>继续跟进树节点 <code>node</code> 看看怎么实现的</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7kefvxqjkj30m5062q5u.jpg" srcset="/img/loading.gif" lazyload alt="img07.png"></p>
+<p>其实路由树就是一棵 <strong>紧凑前缀树</strong></p>
+<p>前缀树利用字符串的公共前缀来减少查询时间,而路由则天生符合前缀的特性</p>
+<p>例如有以下几个路由:</p>
+<ol>
+<li>&#x2F;</li>
+<li>&#x2F;order</li>
+<li>&#x2F;order&#x2F;:name</li>
+<li>&#x2F;order&#x2F;:id</li>
+</ol>
+<p>可以看到这些路由都有根节点 <code>/</code> ,同时下面三个路由都有重复节点 <code>/order</code></p>
+<p>普通的前缀树保存每个字符,而 gin 使用 <strong>紧凑前缀树</strong> 保存每个路由节点,减少了内存的使用,提高查询效率</p>
+<p>此时生成的路由前缀树如下:</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7kefvvkzyj307007z74p.jpg" srcset="/img/loading.gif" lazyload alt="img08.png"></p>
+<p>通过路由树可以快速的检索到对应的的路由节点,至于路由如何注册在这里暂且不表</p>
+<h3 id="回到-handleHTTPRequest-方法"><a href="#回到-handleHTTPRequest-方法" class="headerlink" title="回到 handleHTTPRequest() 方法"></a>回到 handleHTTPRequest() 方法</h3><p>在经历了路由检索, <code>handler</code> 函数的处理,此时一笔请求就已经全部执行完毕了</p>
+<p>通过 <code>c.WriteHeaderNow</code> 将 http 状态写回 header 后,当前请求的处理协程结束</p>
+<p>主协程仍然阻塞在 <code>accept()</code> 监听方法上,通过 channel 来启动协程继续处理后续的请求</p>
+<p>至此,一笔请求就被完整的处理完并返回给调用方</p>
+<p>剩余的细节:</p>
+<ol>
+<li>go 内置的 net 网络通信库,如何建立连接,监听请求,前置处理</li>
+<li>gin 注册路由如何生成路由树</li>
+</ol>
+<p>后面再说吧</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/gin/" class="category-chain-item">gin</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E6%BA%90%E7%A0%81/">#源码</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>gin 源码解读 (一)</div>
+      <div>https://n1ck.cyou/2022/10/28/gin源码解读(一)/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>Author</div>
+          <div>n!Ck</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>Posted on</div>
+          <div>October 28, 2022</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>Licensed under</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - Attribution">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/10/29/gin%E6%BA%90%E7%A0%81%E8%A7%A3%E8%AF%BB(%E4%BA%8C)/" title="gin 源码解读 (二)">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">gin 源码解读 (二)</span>
+                        <span class="visible-mobile">Previous</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/10/27/hello-world/" title="Hello World">
+                        <span class="hidden-mobile">Hello World</span>
+                        <span class="visible-mobile">Next</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;Table of Contents</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Search</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">Keyword</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">Blog works best with JavaScript enabled</div>
+  </noscript>
+</body>
+</html>
