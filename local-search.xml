@@ -4,6 +4,31 @@
   
   
   <entry>
+    <title>(七)mysql 表空间回收</title>
+    <link href="/2022/11/05/(%E4%B8%83)mysql%20%E8%A1%A8%E7%A9%BA%E9%97%B4%E5%9B%9E%E6%94%B6/"/>
+    <url>/2022/11/05/(%E4%B8%83)mysql%20%E8%A1%A8%E7%A9%BA%E9%97%B4%E5%9B%9E%E6%94%B6/</url>
+    
+    <content type="html"><![CDATA[<h3 id="表空间的存储设置"><a href="#表空间的存储设置" class="headerlink" title="表空间的存储设置"></a>表空间的存储设置</h3><p>首先有个设置 <code>innodb_file_per_table</code> 表示是否把表数据存储为单个文件,否则的话就放在共享表空间里</p><p>明确一点,单独存放为一个文件更好,因为这样更便于管理; 而且 <code>drop</code> 命令执行时会删除对应的表文件,如果放在共享空间里, <code>drop</code> 命令不会回收表空间</p><h3 id="delete-语句为何不会回收表空间"><a href="#delete-语句为何不会回收表空间" class="headerlink" title="delete 语句为何不会回收表空间"></a>delete 语句为何不会回收表空间</h3><p><strong>可以结合前面讲的索引复习</strong>, 都知道 mysql 的索引是用 <code>B+</code> 树实现的,由于 <code>B+</code> 树也是一种自平衡的树,所以在对某些索引进行删除或者插入的时候,由于单个节点存储的索引有限,势必会导致单个节点的分裂或者多个节点的重组</p><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7uatmc03pj30ex0bjjt2.jpg" alt="img.png"></p><p>假设需要删除 <code>R4</code> 这条记录,此时并不会实际操作磁盘,而是把页里面的 <code>R4</code> 标记为删除,这是一种 <strong>软删除</strong> 或者叫做 <strong>逻辑删除</strong></p><p>后面如果插入 <code>300</code> 到 <code>600</code> 的记录,是完全可以继续复用这个位置的</p><p>同理当插入一条记录的时候,如果此时页里面已经放满了数据,就会导致当前节点分裂为多个节点,将原先的页按照一定规则重新放到多个节点上</p><p>这里需要注意一点:</p><p>记录的删除仅仅是在页里面将当前数据的位置标记为可复用,而页的删除则是将里面所有的数据标记为可复用</p><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7uattc0hej30oc0fjdk8.jpg" alt="img_1.png"></p><p>例如插入 <code>550</code> 的记录,此时由于页里面已经放满了索引此时需要把原来的页 A 一部分索引数据拆分到一个新的页 B 里面去;这里的拆分和重组由 <code>B+</code> 树的插入和删除性质计算的到</p><p>此时会导致原来完整的 A 出现了 <strong>数据空洞</strong>, 同时新页 B 也产生了 <strong>数据空洞</strong> ; 当一张表经过大量的增删改操作之后,很有可能存在不少的 <strong>数据空洞</strong> </p><p>总结来说,<code>delete</code> 语句仅仅是将页里面的记录位置标记为可以复用,而不是真正的删除页释放空间; 所以执行 <code>delete</code> 语句是无法回收表空间的</p><h3 id="重建表解决表空间空洞的问题"><a href="#重建表解决表空间空洞的问题" class="headerlink" title="重建表解决表空间空洞的问题"></a>重建表解决表空间空洞的问题</h3><p>利用 AB 表的思想,创建一张结构与 A 表相同的 B 表,依次扫描 A 表并顺序插入在 B 表当中, 这样处理过后 B 表的主键就是紧凑没有数据空洞的,数据页的利用率也更高; 操作完成后把流量切到 B 表,然后再删除 A 表即可</p><p>或者直接用 myslq 提供的指令 <code>alter table A engin = InnoDB</code> 进行表的重建</p><p>重建过程当中,如果有新数据写入旧表的话,是不会同步到新表的,此时会导致数据丢失,更新也一样; 所以整个重建过程,必须保证旧表处于只读状态</p><p>如果说保持表 A 的只读状态,那么此时的 <code>DDL</code> 操作就不是 <code>Online</code> 的</p><p>在 mysql 5.6 开始引入 <code>Online DDL</code> ,即重建过程当中,也支持对表 A 的写操作</p><p>基本原理如下:</p><ol><li>扫描表 A 的所有数据页,重新生成对应的 B+ 树,存储到临时文件当中</li><li>生成临时文件的过程中,如果有对表 A 的写操作,则记录在 <code>row log</code> 的日志文件当中</li><li>临时文件生成后,与 <code>row log</code> 的记录进行 <code>merge</code> 操作,得到最终的临时文件</li><li>将最终的临时文件应用到表 A 上</li></ol><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7uatzz998j30o70ehdmc.jpg" alt="img_2.png"></p><p>前面说过表级锁有表锁和 <code>MDL</code> 锁,其中 <code>MDL</code> 写锁就是为了防止在查询过程当中表结构发生变化</p><p>而此时的 <code>DDL</code> 重建表操作就会申请到 <code>MDL</code> 写锁,按照其定义,后续对表 A 的读写请求应该都被阻塞了才对</p><p>其实实际重建表的过程当中,这里的 <code>MDL</code> 写锁在 <code>alter</code> 语句开始执行后,真正拷贝数据之前就已经退化成 <code>MDL</code> 读锁了,这样做重建的时候不会阻塞其他的增删改查操作</p><p>此时也不能直接释放 <code>MDL</code> 锁,这样是为了保护不受其他后面的 <code>DDL</code> 影响</p><p>在整个重建过程中,最耗时的是数据拷贝到临时表的过程,这里退化成读锁也不会阻塞其他正常请求,而到了真正需要拷贝数据的时候,相对于整个过程, <code>MDL</code> 写锁的持有过程相对来说并不长,可以近似认为是 <code>Online</code> 的</p>]]></content>
+    
+    
+    <categories>
+      
+      <category>mysql</category>
+      
+    </categories>
+    
+    
+    <tags>
+      
+      <tag>数据库</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
+  <entry>
     <title>(六)mysql 刷盘机制</title>
     <link href="/2022/11/05/(%E5%85%AD)mysql%20%E5%88%B7%E7%9B%98%E6%9C%BA%E5%88%B6/"/>
     <url>/2022/11/05/(%E5%85%AD)mysql%20%E5%88%B7%E7%9B%98%E6%9C%BA%E5%88%B6/</url>
