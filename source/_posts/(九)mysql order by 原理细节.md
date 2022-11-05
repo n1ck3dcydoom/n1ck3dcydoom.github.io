@@ -87,3 +87,50 @@ set max_length_for_sort_date=16
 如果在 `city`, `name`, `age` 三个字段上建立联合索引,这样检索的时候,索引树里面就已经全部包含了所有需要查询的数据,而且自然有序,这样的索引覆盖还能再减少一次回表查询即可返回结果集
 
 ![img_6.png](https://tva1.sinaimg.cn/large/008vK57jgy1h7ugtf3quvj30he09cmyt.jpg)
+
+
+### 随机排序
+
+```sql
+order by rand()
+```
+
+当添加上 `rand()` 随机函数之后,如果再使用 `explain` 查看执行过程的话,会发现 `extra` 列上多了个 `using temporary` 表示当前查询会使用 **临时表**
+
+![img_7.png](https://tva1.sinaimg.cn/large/008vK57jgy1h7uhsdqh5nj307w01yq3k.jpg)
+
+对于带有临时内存表的排序,mysql 应当选择何种排序算法:
+1. 如果是 `InnoDB` 为了减少磁盘访问,优先选择全字段排序
+2. 如果是带有临时内存表的排序,回表相当于访问内存,其性能几乎不会受到影响,此时会选择 `rowid` 排序
+
+```sql
+select word from t order by rand() limit3
+```
+其排序的查询过程如下:
+1. 创建一张临时内存表,表里面保存两个字段 浮点数 `R` 和 字符串 `W`
+2. 从主表中按照主键顺序取出 `word`,并且调用 `rand()` 函数生成一个随机浮点数,将这个随机浮点数和 `word` 放入内存表的 `R` 和 `W` 字段
+3. 在内存表上排序,初始化 `sort_buffer`, 其包含两个字段 浮点数和字符串
+4. 从内存表中一行一行地取出 `R` 和 `位置信息` 将其放入 `sort_buffer`,然后在 `sort_buffer` 里面完成排序
+5. 排序完成后,取前 3 个数据返回
+
+![img_8.png](https://tva1.sinaimg.cn/large/008vK57jgy1h7uhskxbg6j30o30hrjvf.jpg)
+
+其中内存表的 `内存信息` 就是 mysql 为我们隐式生成的 `rowid`, 其实如果一张表没有显式指出主键的话,mysql 就会隐式的创建 `rowid` 当做主键 id 使用
+
+如果单行数据超过了 mysql 配置的最大单行数据长度,则全字段排序会被转换为 `rowid` 排序,会导致在磁盘上通过临时文件进行归并排序
+
+对于 **随机排序** 且还带有 `limit` 关键字的情况,归并排序完成后所有的数据都是有序的,此时只用取前 `limit` 个,但是实际上除了前 `limit` 个以外的数据,并不关系其是否有序,所以 mysql 在 5.6 版本引入了 `堆排序` 
+
+构造最大堆或者最小堆,初始化容量为 `limit` 个元素,将后续的元素依次添加到堆里,完成遍历后,堆里就保留了 **最大** 或者 **最小** 的前 `limit` 个元素,而后面的则无需关心是否有序
+
+![img_9.png](https://tva1.sinaimg.cn/large/008vK57jgy1h7uhsquhy8j30o00dqagy.jpg)
+
+无论如何,使用 `order by rand()` 都会导致复杂的排序计算
+
+优雅的随机排序应当使用如下操作
+
+1. 统计表的总行数 `C`
+2. 计算随机数 `R = floor(C*rand())` 其中 `floor()` 函数负责向下取整
+3. `select xxxx limit Y,1` 表示从 `Y` 开始取出 `offer = ` 即 `Y+1` 行
+
+若要得到 `X` 个随机记录,则将上述操作重复 `X` 次,这样可以避免主键空洞导致的伪随机
