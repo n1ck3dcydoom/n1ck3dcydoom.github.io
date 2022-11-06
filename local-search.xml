@@ -4,6 +4,56 @@
   
   
   <entry>
+    <title>(十三)mysql 主备同步</title>
+    <link href="/2022/11/06/(%E5%8D%81%E4%B8%89)mysql%20%E4%B8%BB%E5%A4%87%E5%90%8C%E6%AD%A5/"/>
+    <url>/2022/11/06/(%E5%8D%81%E4%B8%89)mysql%20%E4%B8%BB%E5%A4%87%E5%90%8C%E6%AD%A5/</url>
+    
+    <content type="html"><![CDATA[<h3 id="mysql-主备同步的过程"><a href="#mysql-主备同步的过程" class="headerlink" title="mysql 主备同步的过程"></a>mysql 主备同步的过程</h3><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7vlun7uysj30rm0h5dlk.jpg" alt="img.png"></p><p>对于主节点 A 来说,记录一个事务的过程依然符合两阶段提交,只不过多了一个 <code>dump_thread</code> 线程将 <code>binlog</code> 定时同步给从库 B</p><p>从库 B 通过 <code>io_thread</code> 与主库维持一个长连接接收从主库发过来的 <code>binlog</code>, 然后有多个 <code>sql_thread</code> 线程同步 <code>binlog</code> 里面的内容到数据库当中 </p><h3 id="binlog-的存储格式"><a href="#binlog-的存储格式" class="headerlink" title="binlog 的存储格式"></a>binlog 的存储格式</h3><ol><li>statement</li><li>row</li><li>mixed</li></ol><h4 id="statement"><a href="#statement" class="headerlink" title="statement"></a>statement</h4><p><code>statement</code> 模式会如实的记录每一条执行的 sql,例如</p><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7vlutt4h1j314q05vjxi.jpg" alt="img_1.png"></p><p>注意一个问题,使用 <code>statement</code> 格式的时候,如果 <code>delte</code> 语句带有 <code>limit</code> 的话,很可能会导致主备不一致</p><p>因为 <code>delete</code> 后面如果有多个 <code>where</code> 条件,在主库和从库上分别执行这条 sql 语句是,很有可能两个库选择的索引不一致</p><p>这是因为 <code>statement</code> 记录的是原始 sql,当主库执行时,走索引 <code>a</code>,当从库执行时走索引 <code>t_modified</code>, 这是完全可能发生的情况</p><h4 id="row"><a href="#row" class="headerlink" title="row"></a>row</h4><p><code>row</code> 模式不会记录原始 sql 语句,而是记录每条 sql 语句实际操作的行</p><p><strong>这里因为我的 Mac 是 M1 arm64 架构的,而 docker 支持 arm64 架构的 image 都不带 mysqlbinlog 工具,唯一支持 mysqlbinlog 工具的镜像是 mysql-debian,然而 mysql-debian 仅支持 amd64 架构</strong></p><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7vluz1purj30sg09sn5a.jpg" alt="img_2.png"></p><p>实际上可以看到最终执行的语句里面其实是删除 <code>id=4</code> 的记录</p><h3 id="循环复制"><a href="#循环复制" class="headerlink" title="循环复制"></a>循环复制</h3><p>如果说主从之间互为主备关系,即 <code>binlog</code> 文件会互相发给对方用于同步</p><p>对于同一行更新语句生成的 <code>binlog</code> 记录,如何解决循环复制的问题</p><ol><li>规定两个库的 <code>server id</code> 必须不同</li><li>从库收到日志后,重放过程记录 <code>binlog</code> 时生成与原 <code>server id</code> 相同的日志</li><li>收到从库发过来的日志后,判断日志里面记录的 <code>server id</code> 是否是自己的; 如果是自己生成的则丢弃日志;否则进行同步</li></ol>]]></content>
+    
+    
+    <categories>
+      
+      <category>mysql</category>
+      
+    </categories>
+    
+    
+    <tags>
+      
+      <tag>数据库</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
+  <entry>
+    <title>(十二)mysql 日志写入时机</title>
+    <link href="/2022/11/06/(%E5%8D%81%E4%BA%8C)mysql%20%E6%97%A5%E5%BF%97%E5%86%99%E5%85%A5%E6%97%B6%E6%9C%BA/"/>
+    <url>/2022/11/06/(%E5%8D%81%E4%BA%8C)mysql%20%E6%97%A5%E5%BF%97%E5%86%99%E5%85%A5%E6%97%B6%E6%9C%BA/</url>
+    
+    <content type="html"><![CDATA[<h3 id="binlog"><a href="#binlog" class="headerlink" title="binlog"></a>binlog</h3><p>mysql 操作日志的步骤当中,几乎都有为日志文件添加对应的缓存,由此可见 mysql 最大程度上在利用缓存来平衡内存和磁盘间写入速率的差距</p><p>同样的 <code>binlog</code> 也有自己的 <code>binlog buffer</code>, mysql 为每个事务都分配了对应的 <code>binlog buffer</code> 当事务执行时,都是先写入 <code>binlog buffer</code>, 当事务提交的时候才把 <code>binlog buffer</code> 写入 <code>binlog</code></p><p>根据以前的知识,这里写入的 <code>binlog file</code> 其实也还没有真正写入磁盘</p><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7qp5h2r8mj30ca0a4tau.jpg" alt="img.png"></p><p>与这张图类似,都是将用户态的 <code>buffer</code> 写入 <code>os buffer</code> 然后调用 <code>fsync()</code> 刷入磁盘</p><p>同样的,有三种写入机制</p><ol><li>延时写,事务提交后,只写入 <code>os buffer</code>,不调用 <code>fsync()</code> 数据可靠性最低</li><li>实时写,实时刷,事务提交后,写入 <code>os buffer</code>,立即调用 <code>fsync()</code> 数据可靠性最高</li><li>实时写,延时刷,事务提交后,写入 <code>os buffer</code> ,积攒 <code>N</code> 个事务后一次性刷盘, 可能会丢失 <code>N</code> 个事务的记录</li></ol><h3 id="redo-log"><a href="#redo-log" class="headerlink" title="redo log"></a>redo log</h3><p>同样的, <code>redo log</code> 也由两个部分组成 <code>redo log buffer</code> 和 <code>redo log file</code>,与 <code>binlog</code> 差不多,每次都是先写入 <code>buffer</code> 然后写入 <code>os buffer</code> 再调用 <code>fsync()</code> 刷盘</p><p><code>redo log</code> 也有三种写入机制:</p><ol><li>延时写,只写入 <code>redo log buffer</code>,由后台进程每秒写入 <code>os buffer</code> 然后再刷盘,可能丢失 1s 以内的数据</li><li>实时写,实时刷,每次写入 <code>redo log buffer</code> 后立即写入 <code>os buffer</code> 并且刷盘,数据可靠性最高</li><li>实时写,延时刷,每次写入 <code>redo log buffer</code> 后立即写入 <code>os buffer</code> 但是并不立即刷盘,由后台进程每 1s 进行刷盘操作,可能丢失 1s 以内的数据</li></ol><p>根据 <strong>两阶段提交</strong> 的原则,实际上在事务提交的过程中,需要先将 <code>redo log</code> 写为 <code>prepare</code> 状态,再写 <code>binlog</code> 最后将 <code>redo log</code> 写为 <code>commit</code> 状态</p><p>所以在实际的写盘时,在 <code>prepare</code> 阶段就要进行一次持久化操作</p><p>mysql 数据最可靠的配置,就是 <code>binlog</code> 每次提交事物前刷盘, <code>redo log</code> 的 <code>prepare</code> 也刷盘</p><h3 id="组提交"><a href="#组提交" class="headerlink" title="组提交"></a>组提交</h3><p>由于 mysql 最可靠的刷盘配置会在一次事务过程当中进行两次刷盘,为了尽可能提高写磁盘的性能,会将多次写盘操作合并为一次进行组提交</p><p><code>LSN</code> 日志逻辑序号,例如 3 个并发事务都提交了 <code>prepare</code> 的日志,需要完成刷盘操作,根据先后顺序分别是 <code>LSN=50</code> 的事务 1, <code>LSN=120</code> 的事务 2, <code>LSN=160</code> 的事务 3</p><p>当 InnoDB 刷新 <code>redo log</code> 的后台进程开始刷盘时,发现需要刷入的日志尾序号是 <code>LSN=160</code>, 头部是 <code>LSN=50</code> 那么这一次刷盘就会把三个事务的请求合并一起刷入磁盘,尽可能的减少了刷盘的次数</p><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7vjetd1mdj30gq0bfdho.jpg" alt="img.png"></p><p>mysql 为了尽可能的提高一次刷盘的组大小,采用最简单的办法 <code>拖时间</code>, 只要尽可能的晚调用 <code>fsync()</code> 那么一次刷盘的组成员就会越大,所以在事务的两阶段提交过程,也采取了对应的优化措施</p><p>两阶段提交: 存储引擎更新 <code>buffer pool</code> 里面的数据,写入 <code>redo log</code> 为 <code>prepare</code> 状态, 返回 <code>Server</code> 将记录写入 <code>binlog</code> 后提交事务, 存储引擎写入 <code>redo log</code> 为 <code>commit</code></p><p>为了尽可能的利用组提交,mysql 实际上将 <code>binlog</code> 写入 <code>os buffer</code> 这一步提前,放到 <code>热到 log</code> 刷入 <code>prepare</code> 之后</p><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7vjf05oe6j30g50i9wiv.jpg" alt="img_1.png"></p>]]></content>
+    
+    
+    <categories>
+      
+      <category>mysql</category>
+      
+    </categories>
+    
+    
+    <tags>
+      
+      <tag>数据库</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
+  <entry>
     <title>(十一)mysql 幻读和 next-key lock</title>
     <link href="/2022/11/06/(%E5%8D%81%E4%B8%80)mysql%20%E5%B9%BB%E8%AF%BB%E5%92%8C%20next-key%20lock/"/>
     <url>/2022/11/06/(%E5%8D%81%E4%B8%80)mysql%20%E5%B9%BB%E8%AF%BB%E5%92%8C%20next-key%20lock/</url>
