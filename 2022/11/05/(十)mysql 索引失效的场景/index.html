@@ -16,16 +16,16 @@
   <meta name="author" content="n!Ck">
   <meta name="keywords" content="">
   
-    <meta name="description" content="order by假设有一张城市表,记录了城市里面每个人的名字,你年龄的信息 现在需要对城市是 杭州 的所有人,按照年龄排序后返回前 1000 人 1select city,name,age from t where city&#x3D;&amp;#x27;杭州&amp;#x27; order by name limit 999;  全字段排序为了避免扫描全表,很自然的在 where 语句查询的字段 city 上加上索引">
+    <meta name="description" content="mysql 当中索引失效的场景索引字段使用函数思考下 mysql 为何能够通过索引快速定位数据,是因为 B+ 同层节点的有序性 如果说某些操作打破了这种有序性,那么就无法利用索引树来检索数据了,只能走全表扫描 例如 select a from t where sum(a) &gt; 5 这种对索引列做函数操作的,很有可能破坏索引的有序性 其实并不是说 mysql 对于这种函数操作完全放弃了索引,即">
 <meta property="og:type" content="article">
-<meta property="og:title" content="(九)mysql order by 原理细节">
-<meta property="og:url" content="https://n1ck.cyou/2022/11/05/(%E4%B9%9D)mysql%20order%20by%20%E5%8E%9F%E7%90%86%E7%BB%86%E8%8A%82/index.html">
+<meta property="og:title" content="(十)mysql 索引失效的场景">
+<meta property="og:url" content="https://n1ck.cyou/2022/11/05/(%E5%8D%81)mysql%20%E7%B4%A2%E5%BC%95%E5%A4%B1%E6%95%88%E7%9A%84%E5%9C%BA%E6%99%AF/index.html">
 <meta property="og:site_name" content="n!Ck playground">
-<meta property="og:description" content="order by假设有一张城市表,记录了城市里面每个人的名字,你年龄的信息 现在需要对城市是 杭州 的所有人,按照年龄排序后返回前 1000 人 1select city,name,age from t where city&#x3D;&amp;#x27;杭州&amp;#x27; order by name limit 999;  全字段排序为了避免扫描全表,很自然的在 where 语句查询的字段 city 上加上索引">
+<meta property="og:description" content="mysql 当中索引失效的场景索引字段使用函数思考下 mysql 为何能够通过索引快速定位数据,是因为 B+ 同层节点的有序性 如果说某些操作打破了这种有序性,那么就无法利用索引树来检索数据了,只能走全表扫描 例如 select a from t where sum(a) &gt; 5 这种对索引列做函数操作的,很有可能破坏索引的有序性 其实并不是说 mysql 对于这种函数操作完全放弃了索引,即">
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="https://n1ck.cyou/img/mysql.png">
-<meta property="article:published_time" content="2022-11-05T08:29:47.000Z">
-<meta property="article:modified_time" content="2022-11-05T11:50:05.710Z">
+<meta property="article:published_time" content="2022-11-05T12:26:30.000Z">
+<meta property="article:modified_time" content="2022-11-06T05:54:54.499Z">
 <meta property="article:author" content="n!Ck">
 <meta property="article:tag" content="数据库">
 <meta name="twitter:card" content="summary_large_image">
@@ -33,7 +33,7 @@
   
   
   
-  <title>(九)mysql order by 原理细节 - n!Ck playground</title>
+  <title>(十)mysql 索引失效的场景 - n!Ck playground</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -198,7 +198,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="(九)mysql order by 原理细节"></span>
+            <span id="subtitle" data-typed-text="(十)mysql 索引失效的场景"></span>
           
         </div>
 
@@ -209,7 +209,7 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2022-11-05 16:29" pubdate>
+        <time datetime="2022-11-05 20:26" pubdate>
           November 5, 2022 pm
         </time>
       </span>
@@ -221,7 +221,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          2.4k words
+          1.6k words
         
       </span>
     
@@ -232,7 +232,7 @@
         
         
         
-          21 mins
+          14 mins
         
       </span>
     
@@ -270,83 +270,53 @@
         <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
-            <h1 style="display: none">(九)mysql order by 原理细节</h1>
+            <h1 style="display: none">(十)mysql 索引失效的场景</h1>
             
             
               <div class="markdown-body">
                 
-                <h2 id="order-by"><a href="#order-by" class="headerlink" title="order by"></a>order by</h2><p>假设有一张城市表,记录了城市里面每个人的名字,你年龄的信息</p>
-<p>现在需要对城市是 <code>杭州</code> 的所有人,按照年龄排序后返回前 1000 人</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> city,name,age <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> city<span class="hljs-operator">=</span><span class="hljs-string">&#x27;杭州&#x27;</span> <span class="hljs-keyword">order</span> <span class="hljs-keyword">by</span> name limit <span class="hljs-number">999</span>;<br></code></pre></td></tr></table></figure>
+                <h2 id="mysql-当中索引失效的场景"><a href="#mysql-当中索引失效的场景" class="headerlink" title="mysql 当中索引失效的场景"></a>mysql 当中索引失效的场景</h2><h3 id="索引字段使用函数"><a href="#索引字段使用函数" class="headerlink" title="索引字段使用函数"></a>索引字段使用函数</h3><p>思考下 mysql 为何能够通过索引快速定位数据,是因为 <code>B+</code> 同层节点的有序性</p>
+<p>如果说某些操作打破了这种有序性,那么就无法利用索引树来检索数据了,只能走全表扫描</p>
+<p>例如 <code>select a from t where sum(a) &gt; 5</code> 这种对索引列做函数操作的,很有可能破坏索引的有序性</p>
+<p>其实并不是说 mysql 对于这种函数操作完全放弃了索引,即使走全表扫描,仍然可以优化具体使用什么索引树来做全盘扫描</p>
+<p>如果字段 <code>a</code> 上建立了索引,那么扫描索引 <code>a</code> 显然比扫描主键索引更快,这是因为 <code>索引覆盖</code> 带来的优化,不用取出整行数据,索引 <code>a</code> 已经包含了列 <code>a</code> 所需要的所有数据</p>
+<p>同样的,还有更加隐蔽的操作也会导致索引失效</p>
+<p>例如 <code>select * from t where id + 1 = 10000</code> 这里 <code>+1</code> 不会破坏有效性,但是仍然无法通过 id 定位到 <code>9999</code> 这一行 因为 mysql 无法计算 <code>多少 id +1 才能等于 10000</code><br>,还是需要全表扫描</p>
+<p>如果改为 <code>where id = 10000 -1</code> 那么即可快速通过索引定位到 <code>9999</code> 行</p>
+<h3 id="隐式类型转换会导致索引失效"><a href="#隐式类型转换会导致索引失效" class="headerlink" title="隐式类型转换会导致索引失效"></a>隐式类型转换会导致索引失效</h3><p>假如存在一个 <code>varchar()</code> 类型的列 <code>order_id</code> 上建有索引, 以下 sql 会让索引失效</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> orders <span class="hljs-keyword">where</span> order_id <span class="hljs-operator">=</span> <span class="hljs-number">12345</span><br></code></pre></td></tr></table></figure>
 
-<h3 id="全字段排序"><a href="#全字段排序" class="headerlink" title="全字段排序"></a>全字段排序</h3><p>为了避免扫描全表,很自然的在 <code>where</code> 语句查询的字段 <code>city</code> 上加上索引</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7ugsbrl2wj30th0fbjuw.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
-<p>使用 <code>explain</code> 指令查看执行情况</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7ugsiczttj31bh041jxx.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
-<p>在 <code>extra</code> 一列里面可以看到 <code>using filesort</code> 表示进行了排序,实际 mysql 会为每个需要排序的线程分配一块内存区域专门用来加速排序,称为 <code>sort_buffer</code></p>
-<p>一个完整的查询流程如下:</p>
-<ol>
-<li>初始化 <code>sort_buffer</code> ,里面有 3 个字段分别是 <code>city,name,age</code> </li>
-<li>从 <code>city</code> 索引开始查找,找到第一个满足条件的主键 id ,即 <code>id_x</code></li>
-<li>回表得到 <code>id_x</code> 对应的完整数据,取出 <code>name,age</code> 和 <code>city</code> 一起放入 <code>sort_buffer</code></li>
-<li>从 <code>city</code> 索引继续取出下一个满足条件的主键 id,重复 34 过程,直到 <code>city</code> 不再满足条件</li>
-<li>对 <code>sort_buffer</code> 里面的所有数据做快速排序</li>
-<li>将排序结果前 1000 条返回</li>
-</ol>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7ugsnhzo9j30m60gbtd4.jpg" srcset="/img/loading.gif" lazyload alt="img_2.png"></p>
-<p>需要注意的是,由于每次分配的 <code>sourt_buffer</code> 大小是固定的,其不一定能够完全放下所有需要排序的记录; 所以 mysql 会根据实际情况,在内存中完成排序,或者在磁盘上完成排序; 如果在磁盘上进行排序,就不得不依赖磁盘创建临时文件辅助排序</p>
-<p>打开 msyql 的 <code>optimizer_trace</code> 查看优化器的输出</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7ugt1fzvoj30mt05twgy.jpg" srcset="/img/loading.gif" lazyload alt="img_3.png"></p>
-<p>可以看到在磁盘排序时,使用了 12 个临时文件,这是因为在磁盘上排序一般使用 <strong>归并排序</strong> ,将整个数据集分为若干个子文件,对子文件进行排序后再合并为一个有序的大文件</p>
-<h3 id="rowid-排序"><a href="#rowid-排序" class="headerlink" title="rowid 排序"></a>rowid 排序</h3><p>上面的全字段排序会将所有需要排序的字段取出放到 <code>sort_buffer</code> 里面,如果字段多,数据行多的话,就会导致 <code>sort_buffer</code> 里面要保存的数据太多,由于内存是有限制的,所以很快 <code>sort_buffer</code> 就会被占满,这样就需要把数据分散到多个临时文件里面做归并排序,其性能会差很多</p>
-<p>可以通过修改 mysql 控制排序数据行长度的参数,让 myslq 选择另一种排序方式 <code>rowid</code> 排序</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">set</span> max_length_for_sort_date<span class="hljs-operator">=</span><span class="hljs-number">16</span><br></code></pre></td></tr></table></figure>
+<p>注意到 <code>order_id</code> 本身是 <code>varchar()</code> 类型,但是 sql 语句里面却是用 <code>int</code> 整型变量在做比较,这会导致发生 <strong>隐形类型转换</strong> 从而导致索引失效</p>
+<p><strong>mysql 将数字和字符串作为比较的话,会把字符串转换为数字</strong></p>
+<p>为何隐式类型转换会导致索引失效</p>
+<p>在了解到字符串如果和数字作对比,会把字符串转换为数字之后,上面 sql 的本质就发生了改变</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> orders <span class="hljs-keyword">where</span> <span class="hljs-built_in">CAST</span>(order_id <span class="hljs-keyword">AS</span> <span class="hljs-type">int</span>) <span class="hljs-operator">=</span> <span class="hljs-number">12345</span><br></code></pre></td></tr></table></figure>
 
-<p>如果单行总长度超过这个值,就该用 <code>rowid</code> 排序</p>
-<p><code>rowid</code> 排序不把单行所有字段放入 <code>sort_buffer</code> 里面,仅仅把主键 id 和需要排序的列放入 <code>sort_buffer</code>, 由于 <code>sort_buffer</code> 里面缺少了单行的所有信息,所以不能够在完成排序后直接返回,需要多添加一步回表查询的过程</p>
-<p>当 <code>sort_buffer</code> 完成排序后,遍历前 1000 条记录,通过主键 id 再次回表查询得到所有的数据行返回</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7ugst18g8j30n10hhtf6.jpg" srcset="/img/loading.gif" lazyload alt="img_4.png"></p>
-<h3 id="全字段排序和-rowid-排序"><a href="#全字段排序和-rowid-排序" class="headerlink" title="全字段排序和 rowid 排序"></a>全字段排序和 rowid 排序</h3><p>如果 mysql 检测到内存足够,就会使用全字段排序,因为这样能够节省一次回表的查询开销</p>
-<p>如果内存不足,则会改用 <code>rowid</code> 排序,这样可以提高一次性排序的行数,但是对应的代价就是多了一次回表查询</p>
-<p>总的来说,mysql 体现了一个原则就是: 内存够用就要尽可能利用内存,减少磁盘的访问</p>
-<h3 id="使用索引覆盖来加速排序过程"><a href="#使用索引覆盖来加速排序过程" class="headerlink" title="使用索引覆盖来加速排序过程"></a>使用索引覆盖来加速排序过程</h3><p>如果查询的列天然有序,则可以进一步提高 <code>order by</code> 语句的效率</p>
-<p>对于仍然是查询 <code>city</code>, <code>name</code>, <code>age</code> 的 sql,如果在 <code>city</code> 和 <code>name</code> 上建立联合索引</p>
-<p>这样 <code>where</code> 语句使用 <code>city</code> 索引检索的时候, <code>name</code> 也是自然有序的,这样可以节省排序的步骤,只需要一次回表查询即可返回结果集</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7ugt8teb7j30lq08xacf.jpg" srcset="/img/loading.gif" lazyload alt="img_5.png"></p>
-<p>如果在 <code>city</code>, <code>name</code>, <code>age</code> 三个字段上建立联合索引,这样检索的时候,索引树里面就已经全部包含了所有需要查询的数据,而且自然有序,这样的索引覆盖还能再减少一次回表查询即可返回结果集</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7ugtf3quvj30he09cmyt.jpg" srcset="/img/loading.gif" lazyload alt="img_6.png"></p>
-<h3 id="随机排序"><a href="#随机排序" class="headerlink" title="随机排序"></a>随机排序</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">order</span> <span class="hljs-keyword">by</span> rand()<br></code></pre></td></tr></table></figure>
+<p>可以看到这里的隐式类型转换实际上是对字符串调用了 <code>CAST()</code> 函数,而之前说过,如果在索引列上有函数操作的话,可能会破坏索引树的有序性,从而 mysql 不使用索引改用全表扫描</p>
+<p>同样的,如果在做关联查询的时候,两个连接的字段的字符编码不相同,也会触发隐式类型转换,从而导致索引失效</p>
+<h3 id="最左前缀原则"><a href="#最左前缀原则" class="headerlink" title="最左前缀原则"></a>最左前缀原则</h3><p>如果存在联合索引,则查询列里面的索引必须从最左侧开始且不允许跳过中间的索引列</p>
+<p>例如存在联合索引 <code>a,b,c</code> ,如下 sql 语句属于 <strong>全值匹配</strong> 可以命中索引</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span> <span class="hljs-keyword">and</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span> <span class="hljs-keyword">and</span> c <span class="hljs-operator">=</span> <span class="hljs-number">3</span><br></code></pre></td></tr></table></figure>
 
-<p>当添加上 <code>rand()</code> 随机函数之后,如果再使用 <code>explain</code> 查看执行过程的话,会发现 <code>extra</code> 列上多了个 <code>using temporary</code> 表示当前查询会使用 <strong>临时表</strong></p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7uhsdqh5nj307w01yq3k.jpg" srcset="/img/loading.gif" lazyload alt="img_7.png"></p>
-<p>对于带有临时内存表的排序,mysql 应当选择何种排序算法:</p>
-<ol>
-<li>如果是 <code>InnoDB</code> 为了减少磁盘访问,优先选择全字段排序</li>
-<li>如果是带有临时内存表的排序,回表相当于访问内存,其性能几乎不会受到影响,此时会选择 <code>rowid</code> 排序</li>
-</ol>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> word <span class="hljs-keyword">from</span> t <span class="hljs-keyword">order</span> <span class="hljs-keyword">by</span> rand() limit3<br></code></pre></td></tr></table></figure>
-<p>其排序的查询过程如下:</p>
-<ol>
-<li>创建一张临时内存表,表里面保存两个字段 浮点数 <code>R</code> 和 字符串 <code>W</code></li>
-<li>从主表中按照主键顺序取出 <code>word</code>,并且调用 <code>rand()</code> 函数生成一个随机浮点数,将这个随机浮点数和 <code>word</code> 放入内存表的 <code>R</code> 和 <code>W</code> 字段</li>
-<li>在内存表上排序,初始化 <code>sort_buffer</code>, 其包含两个字段 浮点数和字符串</li>
-<li>从内存表中一行一行地取出 <code>R</code> 和 <code>位置信息</code> 将其放入 <code>sort_buffer</code>,然后在 <code>sort_buffer</code> 里面完成排序</li>
-<li>排序完成后,取前 3 个数据返回</li>
-</ol>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7uhskxbg6j30o30hrjvf.jpg" srcset="/img/loading.gif" lazyload alt="img_8.png"></p>
-<p>其中内存表的 <code>内存信息</code> 就是 mysql 为我们隐式生成的 <code>rowid</code>, 其实如果一张表没有显式指出主键的话,mysql 就会隐式的创建 <code>rowid</code> 当做主键 id 使用</p>
-<p>如果单行数据超过了 mysql 配置的最大单行数据长度,则全字段排序会被转换为 <code>rowid</code> 排序,会导致在磁盘上通过临时文件进行归并排序</p>
-<p>对于 <strong>随机排序</strong> 且还带有 <code>limit</code> 关键字的情况,归并排序完成后所有的数据都是有序的,此时只用取前 <code>limit</code> 个,但是实际上除了前 <code>limit</code> 个以外的数据,并不关系其是否有序,所以 mysql 在 5.6 版本引入了 <code>堆排序</code> </p>
-<p>构造最大堆或者最小堆,初始化容量为 <code>limit</code> 个元素,将后续的元素依次添加到堆里,完成遍历后,堆里就保留了 <strong>最大</strong> 或者 <strong>最小</strong> 的前 <code>limit</code> 个元素,而后面的则无需关心是否有序</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7uhsquhy8j30o00dqagy.jpg" srcset="/img/loading.gif" lazyload alt="img_9.png"></p>
-<p>无论如何,使用 <code>order by rand()</code> 都会导致复杂的排序计算</p>
-<p>优雅的随机排序应当使用如下操作</p>
-<ol>
-<li>统计表的总行数 <code>C</code></li>
-<li>计算随机数 <code>R = floor(C*rand())</code> 其中 <code>floor()</code> 函数负责向下取整</li>
-<li><code>select xxxx limit Y,1</code> 表示从 <code>Y</code> 开始取出 <code>offer = </code> 即 <code>Y+1</code> 行</li>
-</ol>
-<p>若要得到 <code>X</code> 个随机记录,则将上述操作重复 <code>X</code> 次,这样可以避免主键空洞导致的伪随机</p>
+<p>这里跟查询列的顺序无关,只要在逻辑上满足索引列从左到右的匹配顺序即可,myslq 优化器会在内部自动调整索引的顺序</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span> <span class="hljs-keyword">and</span> c <span class="hljs-operator">=</span> <span class="hljs-number">3</span> <span class="hljs-keyword">and</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span><br></code></pre></td></tr></table></figure>
+
+<p><strong>非全值匹配</strong> 只要满足从左到右的前缀即可</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span> <span class="hljs-keyword">and</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span><br></code></pre></td></tr></table></figure>
+
+<p>但是不能出现缺少或者跳过,这样会导致最左前缀原则失效,从而导致索引失效</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-comment">-- 从左往右缺少 a</span><br><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span> <span class="hljs-keyword">and</span> c <span class="hljs-operator">=</span> <span class="hljs-number">3</span> <br><span class="hljs-comment">-- 跳过 b</span><br><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span> <span class="hljs-keyword">and</span> c <span class="hljs-operator">=</span> <span class="hljs-number">3</span><br></code></pre></td></tr></table></figure>
+
+<p>同样对于模糊查找也必须满足最左前缀原则</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-comment">-- 模糊检索最左前缀 a 是确定的,后面 % 才是通配符,符合最左前缀原则,可以命中索引 a</span><br><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-keyword">like</span> <span class="hljs-string">&#x27;a%&#x27;</span><br><br><span class="hljs-comment">-- 最左前缀 % 是通配符,属于不确定的,破坏了最左前缀原则,不能命中索引 a</span><br><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-keyword">like</span> <span class="hljs-string">&#x27;%a&#x27;</span><br></code></pre></td></tr></table></figure>
+
+<h3 id="使用-OR-关键字"><a href="#使用-OR-关键字" class="headerlink" title="使用 OR 关键字"></a>使用 OR 关键字</h3><p>例如只有列 <code>a</code> 有索引</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span> <span class="hljs-keyword">or</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span><br></code></pre></td></tr></table></figure>
+
+<p>此时会导致索引失效,假设只有 <code>where b = 2</code> 此时肯定是全表扫描,已经得到 <code>a,b</code> 的值,就不用再遍历 <code>a</code> 的索引了; 否则使用 <code>a</code> 的索引后还需要一次全表扫描才能判断 <code>b</code> 的条件</p>
+<p>使用 <code>or</code> 关键字的时候,必须保证两边都有索引才可以</p>
+<h3 id="负向查询"><a href="#负向查询" class="headerlink" title="负向查询"></a>负向查询</h3><p>常见的负向查询有 <code>NOT, IS NOT NULL, !=, NOT IN, NOT LIKE</code> 等</p>
+<p>这些查询不一定会导致索引失效,mysql 在实际执行的过程当中,根据优化器的判断决定是否选择索引,亦或者是全表扫描</p>
 
                 
               </div>
@@ -392,8 +362,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>(九)mysql order by 原理细节</div>
-      <div>https://n1ck.cyou/2022/11/05/(九)mysql order by 原理细节/</div>
+      <div>(十)mysql 索引失效的场景</div>
+      <div>https://n1ck.cyou/2022/11/05/(十)mysql 索引失效的场景/</div>
     </div>
     <div class="license-meta">
       
@@ -437,18 +407,12 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2022/11/05/(%E5%8D%81)mysql%20%E7%B4%A2%E5%BC%95%E5%A4%B1%E6%95%88%E7%9A%84%E5%9C%BA%E6%99%AF/" title="(十)mysql 索引失效的场景">
-                        <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">(十)mysql 索引失效的场景</span>
-                        <span class="visible-mobile">Previous</span>
-                      </a>
-                    
                   </article>
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2022/11/05/(%E5%85%AB)mysql%20count%20%E5%87%BD%E6%95%B0%E6%9C%BA%E5%88%B6/" title="(八)mysql count 函数机制">
-                        <span class="hidden-mobile">(八)mysql count 函数机制</span>
+                      <a href="/2022/11/05/(%E4%B9%9D)mysql%20order%20by%20%E5%8E%9F%E7%90%86%E7%BB%86%E8%8A%82/" title="(九)mysql order by 原理细节">
+                        <span class="hidden-mobile">(九)mysql order by 原理细节</span>
                         <span class="visible-mobile">Next</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
