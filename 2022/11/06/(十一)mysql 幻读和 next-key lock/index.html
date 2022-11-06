@@ -16,16 +16,16 @@
   <meta name="author" content="n!Ck">
   <meta name="keywords" content="">
   
-    <meta name="description" content="mysql 当中索引失效的场景索引字段使用函数思考下 mysql 为何能够通过索引快速定位数据,是因为 B+ 同层节点的有序性 如果说某些操作打破了这种有序性,那么就无法利用索引树来检索数据了,只能走全表扫描 例如 select a from t where sum(a) &gt; 5 这种对索引列做函数操作的,很有可能破坏索引的有序性 其实并不是说 mysql 对于这种函数操作完全放弃了索引,即">
+    <meta name="description" content="什么是幻读幻读的定义: 事务在执行过程前后两次查询同一个范围内的数据时,后一次读到了前一次没有读到的结果 在可重复度级别下,普通的查询时 快照读 是不会观测到其他事务在其中插入的数据的,因此 幻读 仅发生在 当前读 的操作下 幻读带了什么问题假设有如下三个会话,并且没有针对幻读采取任何措施 且表里面只有 2 条记录 id &#x3D; 5, d &#x3D; 5, id &#x3D; 0, d &#x3D; 0, 执行顺序如下  从语义">
 <meta property="og:type" content="article">
-<meta property="og:title" content="(十)mysql 索引失效的场景">
-<meta property="og:url" content="https://n1ck.cyou/2022/11/05/(%E5%8D%81)mysql%20%E7%B4%A2%E5%BC%95%E5%A4%B1%E6%95%88%E7%9A%84%E5%9C%BA%E6%99%AF/index.html">
+<meta property="og:title" content="(十一)mysql 幻读和 next-key lock">
+<meta property="og:url" content="https://n1ck.cyou/2022/11/06/(%E5%8D%81%E4%B8%80)mysql%20%E5%B9%BB%E8%AF%BB%E5%92%8C%20next-key%20lock/index.html">
 <meta property="og:site_name" content="n!Ck playground">
-<meta property="og:description" content="mysql 当中索引失效的场景索引字段使用函数思考下 mysql 为何能够通过索引快速定位数据,是因为 B+ 同层节点的有序性 如果说某些操作打破了这种有序性,那么就无法利用索引树来检索数据了,只能走全表扫描 例如 select a from t where sum(a) &gt; 5 这种对索引列做函数操作的,很有可能破坏索引的有序性 其实并不是说 mysql 对于这种函数操作完全放弃了索引,即">
+<meta property="og:description" content="什么是幻读幻读的定义: 事务在执行过程前后两次查询同一个范围内的数据时,后一次读到了前一次没有读到的结果 在可重复度级别下,普通的查询时 快照读 是不会观测到其他事务在其中插入的数据的,因此 幻读 仅发生在 当前读 的操作下 幻读带了什么问题假设有如下三个会话,并且没有针对幻读采取任何措施 且表里面只有 2 条记录 id &#x3D; 5, d &#x3D; 5, id &#x3D; 0, d &#x3D; 0, 执行顺序如下  从语义">
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="https://n1ck.cyou/img/mysql.png">
-<meta property="article:published_time" content="2022-11-05T12:26:30.000Z">
-<meta property="article:modified_time" content="2022-11-06T05:54:54.499Z">
+<meta property="article:published_time" content="2022-11-06T06:11:53.000Z">
+<meta property="article:modified_time" content="2022-11-06T07:20:23.068Z">
 <meta property="article:author" content="n!Ck">
 <meta property="article:tag" content="数据库">
 <meta name="twitter:card" content="summary_large_image">
@@ -33,7 +33,7 @@
   
   
   
-  <title>(十)mysql 索引失效的场景 - n!Ck playground</title>
+  <title>(十一)mysql 幻读和 next-key lock - n!Ck playground</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -198,7 +198,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="(十)mysql 索引失效的场景"></span>
+            <span id="subtitle" data-typed-text="(十一)mysql 幻读和 next-key lock"></span>
           
         </div>
 
@@ -209,8 +209,8 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2022-11-05 20:26" pubdate>
-          November 5, 2022 pm
+        <time datetime="2022-11-06 14:11" pubdate>
+          November 6, 2022 pm
         </time>
       </span>
     
@@ -270,53 +270,48 @@
         <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
-            <h1 style="display: none">(十)mysql 索引失效的场景</h1>
+            <h1 style="display: none">(十一)mysql 幻读和 next-key lock</h1>
             
             
               <div class="markdown-body">
                 
-                <h2 id="mysql-当中索引失效的场景"><a href="#mysql-当中索引失效的场景" class="headerlink" title="mysql 当中索引失效的场景"></a>mysql 当中索引失效的场景</h2><h3 id="索引字段使用函数"><a href="#索引字段使用函数" class="headerlink" title="索引字段使用函数"></a>索引字段使用函数</h3><p>思考下 mysql 为何能够通过索引快速定位数据,是因为 <code>B+</code> 同层节点的有序性</p>
-<p>如果说某些操作打破了这种有序性,那么就无法利用索引树来检索数据了,只能走全表扫描</p>
-<p>例如 <code>select a from t where sum(a) &gt; 5</code> 这种对索引列做函数操作的,很有可能破坏索引的有序性</p>
-<p>其实并不是说 mysql 对于这种函数操作完全放弃了索引,即使走全表扫描,仍然可以优化具体使用什么索引树来做全盘扫描</p>
-<p>如果字段 <code>a</code> 上建立了索引,那么扫描索引 <code>a</code> 显然比扫描主键索引更快,这是因为 <code>索引覆盖</code> 带来的优化,不用取出整行数据,索引 <code>a</code> 已经包含了列 <code>a</code> 所需要的所有数据</p>
-<p>同样的,还有更加隐蔽的操作也会导致索引失效</p>
-<p>例如 <code>select * from t where id + 1 = 10000</code> 这里 <code>+1</code> 不会破坏有效性,但是仍然无法通过 id 定位到 <code>9999</code> 这一行 因为 mysql 无法计算 <code>多少 id +1 才能等于 10000</code><br>,还是需要全表扫描</p>
-<p>如果改为 <code>where id = 10000 -1</code> 那么即可快速通过索引定位到 <code>9999</code> 行</p>
-<h3 id="隐式类型转换会导致索引失效"><a href="#隐式类型转换会导致索引失效" class="headerlink" title="隐式类型转换会导致索引失效"></a>隐式类型转换会导致索引失效</h3><p>假如存在一个 <code>varchar()</code> 类型的列 <code>order_id</code> 上建有索引, 以下 sql 会让索引失效</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> orders <span class="hljs-keyword">where</span> order_id <span class="hljs-operator">=</span> <span class="hljs-number">12345</span><br></code></pre></td></tr></table></figure>
+                <h2 id="什么是幻读"><a href="#什么是幻读" class="headerlink" title="什么是幻读"></a>什么是幻读</h2><p>幻读的定义: 事务在执行过程前后两次查询同一个范围内的数据时,后一次读到了前一次没有读到的结果</p>
+<p>在可重复度级别下,普通的查询时 <strong>快照读</strong> 是不会观测到其他事务在其中插入的数据的,因此 <strong>幻读</strong> 仅发生在 <strong>当前读</strong> 的操作下</p>
+<h3 id="幻读带了什么问题"><a href="#幻读带了什么问题" class="headerlink" title="幻读带了什么问题"></a>幻读带了什么问题</h3><p>假设有如下三个会话,并且没有针对幻读采取任何措施</p>
+<p>且表里面只有 2 条记录 <code>id = 5, d = 5</code>, <code>id = 0, d = 0</code>, 执行顺序如下</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7vflq7ab8j30rz0f1grs.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
+<p>从语义上来说,会话 A 开启了 <strong>当前读</strong> ,所以三次 <code>select</code> 查询得到不同的结果,在这个场景下看起来是符合语义的,当前读就是能看到其他未提交会话的更新操作</p>
+<p>如果会话 A 在 T1 时刻查询后执行了一次 <code>update</code> 操作 <code>update t set d = 100 where d = 5</code></p>
+<p>由于会话 B 和 C 都是执行一条 sql 语句,会在执行完成后立马提交事务,而会话 A 因为是通过 <code>begin</code> 开启的事务,所以必须在显式声明 <code>commit</code> 后才会提交事务,那么 <code>binlog</code> 的记录会是什么样的呢</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-comment">-- 会话 B</span><br><span class="hljs-keyword">update</span> t <span class="hljs-keyword">set</span> d <span class="hljs-operator">=</span> <span class="hljs-number">5</span> <span class="hljs-keyword">where</span> id <span class="hljs-operator">=</span> <span class="hljs-number">0</span>    <span class="hljs-comment">-- (0,0,5)</span><br><br><span class="hljs-comment">-- 会话 C</span><br>inserst <span class="hljs-keyword">into</span> t <span class="hljs-keyword">values</span>(<span class="hljs-number">1</span>,<span class="hljs-number">1</span>,<span class="hljs-number">5</span>)       <span class="hljs-comment">-- (1,1,5)</span><br><br><span class="hljs-comment">-- 会话 A</span><br><span class="hljs-keyword">update</span> t <span class="hljs-keyword">set</span> d <span class="hljs-operator">=</span> <span class="hljs-number">100</span> <span class="hljs-keyword">where</span> d <span class="hljs-operator">=</span> <span class="hljs-number">5</span>   <span class="hljs-comment">-- (5,5,100) (0,0,100) (1,1,100)</span><br></code></pre></td></tr></table></figure>
 
-<p>注意到 <code>order_id</code> 本身是 <code>varchar()</code> 类型,但是 sql 语句里面却是用 <code>int</code> 整型变量在做比较,这会导致发生 <strong>隐形类型转换</strong> 从而导致索引失效</p>
-<p><strong>mysql 将数字和字符串作为比较的话,会把字符串转换为数字</strong></p>
-<p>为何隐式类型转换会导致索引失效</p>
-<p>在了解到字符串如果和数字作对比,会把字符串转换为数字之后,上面 sql 的本质就发生了改变</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> orders <span class="hljs-keyword">where</span> <span class="hljs-built_in">CAST</span>(order_id <span class="hljs-keyword">AS</span> <span class="hljs-type">int</span>) <span class="hljs-operator">=</span> <span class="hljs-number">12345</span><br></code></pre></td></tr></table></figure>
+<p>如果使用这份 <code>binlog</code> 去做主备同步或者备份数据库的话,会导致 <code>id = 0 和 id = 1</code> 的数据发生不一致的现象</p>
+<p>很明显,会话 A 的 <strong>当前读</strong> 语义上是要对所有 <code>d = 5</code> 的数据加上锁,但是后来发现会话 B 将原来 <code>d != 5 的 id = 0</code> 的记录给更新为 <code>d = 5</code>,而且会话 C 更是插入了一条 <code>id = 1 且 d = 5</code> 的数据,这根原来会话 A 给 <code>d = 5</code> 加锁的语义发生了冲突</p>
+<p>显然会话 A 并没有为所有 <code>d = 5</code> 的记录加上行锁,仅仅是锁住了 <code>id = 5, d = 5</code> 这一行数据; 如果进一步假设锁的范围变得更加严格,让所有被扫描过的 <code>d = 5</code> 的记录加上行锁</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7vflvnhywj30lb0990vu.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
+<p>但是对于会话 C 呢,由于 <code>id = 1</code> 的记录之前并不存在所以自然而言也没有对 <code>id = </code> 的记录加锁,所以会话 C 仍然能够执行,此时 <code>binlog</code> 日志记录如下:</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-comment">-- 会话 B 被阻塞,</span><br><span class="hljs-comment">-- update t set d = 5 where id = 0    -- (0,0,5)</span><br><br><span class="hljs-comment">-- 会话 C 因为 id = 0 的记录不存在,自然也没有锁,能够正常插入</span><br>inserst <span class="hljs-keyword">into</span> t <span class="hljs-keyword">values</span>(<span class="hljs-number">1</span>,<span class="hljs-number">1</span>,<span class="hljs-number">5</span>)       <span class="hljs-comment">-- (1,1,5)</span><br><br><span class="hljs-comment">-- 会话 A</span><br><span class="hljs-keyword">update</span> t <span class="hljs-keyword">set</span> d <span class="hljs-operator">=</span> <span class="hljs-number">100</span> <span class="hljs-keyword">where</span> d <span class="hljs-operator">=</span> <span class="hljs-number">5</span>   <span class="hljs-comment">-- (5,5,100) (0,0,0) (1,1,100)</span><br><br><span class="hljs-comment">-- 会话 B 在会话 A 提交后才能得以更新</span><br><span class="hljs-keyword">update</span> t <span class="hljs-keyword">set</span> d <span class="hljs-operator">=</span> <span class="hljs-number">5</span> <span class="hljs-keyword">where</span> id <span class="hljs-operator">=</span> <span class="hljs-number">0</span>    <span class="hljs-comment">-- (0,0,5)</span><br></code></pre></td></tr></table></figure>
 
-<p>可以看到这里的隐式类型转换实际上是对字符串调用了 <code>CAST()</code> 函数,而之前说过,如果在索引列上有函数操作的话,可能会破坏索引树的有序性,从而 mysql 不使用索引改用全表扫描</p>
-<p>同样的,如果在做关联查询的时候,两个连接的字段的字符编码不相同,也会触发隐式类型转换,从而导致索引失效</p>
-<h3 id="最左前缀原则"><a href="#最左前缀原则" class="headerlink" title="最左前缀原则"></a>最左前缀原则</h3><p>如果存在联合索引,则查询列里面的索引必须从最左侧开始且不允许跳过中间的索引列</p>
-<p>例如存在联合索引 <code>a,b,c</code> ,如下 sql 语句属于 <strong>全值匹配</strong> 可以命中索引</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span> <span class="hljs-keyword">and</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span> <span class="hljs-keyword">and</span> c <span class="hljs-operator">=</span> <span class="hljs-number">3</span><br></code></pre></td></tr></table></figure>
-
-<p>这里跟查询列的顺序无关,只要在逻辑上满足索引列从左到右的匹配顺序即可,myslq 优化器会在内部自动调整索引的顺序</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span> <span class="hljs-keyword">and</span> c <span class="hljs-operator">=</span> <span class="hljs-number">3</span> <span class="hljs-keyword">and</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span><br></code></pre></td></tr></table></figure>
-
-<p><strong>非全值匹配</strong> 只要满足从左到右的前缀即可</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span> <span class="hljs-keyword">and</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span><br></code></pre></td></tr></table></figure>
-
-<p>但是不能出现缺少或者跳过,这样会导致最左前缀原则失效,从而导致索引失效</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-comment">-- 从左往右缺少 a</span><br><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span> <span class="hljs-keyword">and</span> c <span class="hljs-operator">=</span> <span class="hljs-number">3</span> <br><span class="hljs-comment">-- 跳过 b</span><br><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span> <span class="hljs-keyword">and</span> c <span class="hljs-operator">=</span> <span class="hljs-number">3</span><br></code></pre></td></tr></table></figure>
-
-<p>同样对于模糊查找也必须满足最左前缀原则</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-comment">-- 模糊检索最左前缀 a 是确定的,后面 % 才是通配符,符合最左前缀原则,可以命中索引 a</span><br><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-keyword">like</span> <span class="hljs-string">&#x27;a%&#x27;</span><br><br><span class="hljs-comment">-- 最左前缀 % 是通配符,属于不确定的,破坏了最左前缀原则,不能命中索引 a</span><br><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-keyword">like</span> <span class="hljs-string">&#x27;%a&#x27;</span><br></code></pre></td></tr></table></figure>
-
-<h3 id="使用-OR-关键字"><a href="#使用-OR-关键字" class="headerlink" title="使用 OR 关键字"></a>使用 OR 关键字</h3><p>例如只有列 <code>a</code> 有索引</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span> <span class="hljs-keyword">or</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span><br></code></pre></td></tr></table></figure>
-
-<p>此时会导致索引失效,假设只有 <code>where b = 2</code> 此时肯定是全表扫描,已经得到 <code>a,b</code> 的值,就不用再遍历 <code>a</code> 的索引了; 否则使用 <code>a</code> 的索引后还需要一次全表扫描才能判断 <code>b</code> 的条件</p>
-<p>使用 <code>or</code> 关键字的时候,必须保证两边都有索引才可以</p>
-<h3 id="负向查询"><a href="#负向查询" class="headerlink" title="负向查询"></a>负向查询</h3><p>常见的负向查询有 <code>NOT, IS NOT NULL, !=, NOT IN, NOT LIKE</code> 等</p>
-<p>这些查询不一定会导致索引失效,mysql 在实际执行的过程当中,根据优化器的判断决定是否选择索引,亦或者是全表扫描</p>
+<p>显然,会话 B 的问题解决了,但是会话 C 的问题还没有解决</p>
+<p>可以看到给单独的行加上行锁,或者给扫描过行加上行锁,在 <strong>当前读</strong> 的场景下都无法解决幻读的问题</p>
+<h3 id="如何解决幻读"><a href="#如何解决幻读" class="headerlink" title="如何解决幻读"></a>如何解决幻读</h3><p>InnoDB 引入 <code>间隙锁</code> 的概念来解决行锁,先说下 <code>间隙</code> 是什么</p>
+<p>对于上面的表,只有两条记录的时候 <code>id = 0, d = 0</code> 和 <code>id = 5, d = 5</code>, 此时把主键 id 放到一条数轴上,有如下表示:</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7vfm2gsxnj30fa03cjrd.jpg" srcset="/img/loading.gif" lazyload alt="img_2.png"></p>
+<p>InnoDB 规定 <code>间隙</code> 的区间端点为 <code>左开右闭</code> ,对于正无穷为了让右区间为闭区间,InnoDB 约定了一个固定的最大值</p>
+<p>对于 <code>间隙</code> 上面的加锁,就叫做 <code>间隙锁</code></p>
+<p>在有了 <code>间隙锁</code> 之后,会话 A ,就会为数据两边的 <code>间隙</code> 都加上 <code>间隙锁</code>,如下图所示</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7vfm95entj30om08awfj.jpg" srcset="/img/loading.gif" lazyload alt="img_3.png"></p>
+<p>可以看到当会话 A 查询 <code>id = 3</code> 的记录时 <code>for update</code> 不仅仅为当前记录加锁,还把周围的间隙也加上了锁; 这样会话 B 在这个间隙里插入记录的时候会被阻塞掉</p>
+<h3 id="间隙锁和死锁问题"><a href="#间隙锁和死锁问题" class="headerlink" title="间隙锁和死锁问题"></a>间隙锁和死锁问题</h3><p>考虑如下场景</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7vfme14t9j30rl0ah76b.jpg" srcset="/img/loading.gif" lazyload alt="img_4.png"></p>
+<p>对于会话 A,锁住的间隙是 <code>(5,max]</code>, 对于会话 B,锁住的间隙也是 <code>(5,max]</code>,可以看到同一个间隙锁可以被多个会话同时加锁,它们之间并不互斥,与间隙锁发生互斥的条件仅仅是 <strong>往间隙当中插入新数据</strong> </p>
+<p>紧接着会话 B 插入数据,由于会话 A 持有了间隙锁,所以会话 B 被阻塞</p>
+<p>同理会话 A 插入数据时也因为间隙锁导致阻塞,这里 mysql 的主动死锁检测立马就会返回报错</p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>InnoDB 如何解决幻读问题</p>
+<ul>
+<li>对于快照读, <code>MVCC</code> 可以保证幻读不会产生</li>
+<li>对于当前读, <code>间隙锁</code> 保证幻读不会产生</li>
+</ul>
 
                 
               </div>
@@ -362,8 +357,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>(十)mysql 索引失效的场景</div>
-      <div>https://n1ck.cyou/2022/11/05/(十)mysql 索引失效的场景/</div>
+      <div>(十一)mysql 幻读和 next-key lock</div>
+      <div>https://n1ck.cyou/2022/11/06/(十一)mysql 幻读和 next-key lock/</div>
     </div>
     <div class="license-meta">
       
@@ -375,7 +370,7 @@
       
         <div class="license-meta-item license-meta-date">
           <div>Posted on</div>
-          <div>November 5, 2022</div>
+          <div>November 6, 2022</div>
         </div>
       
       
@@ -407,18 +402,12 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2022/11/06/(%E5%8D%81%E4%B8%80)mysql%20%E5%B9%BB%E8%AF%BB%E5%92%8C%20next-key%20lock/" title="(十一)mysql 幻读和 next-key lock">
-                        <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">(十一)mysql 幻读和 next-key lock</span>
-                        <span class="visible-mobile">Previous</span>
-                      </a>
-                    
                   </article>
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2022/11/05/(%E4%B9%9D)mysql%20order%20by%20%E5%8E%9F%E7%90%86%E7%BB%86%E8%8A%82/" title="(九)mysql order by 原理细节">
-                        <span class="hidden-mobile">(九)mysql order by 原理细节</span>
+                      <a href="/2022/11/05/(%E5%8D%81)mysql%20%E7%B4%A2%E5%BC%95%E5%A4%B1%E6%95%88%E7%9A%84%E5%9C%BA%E6%99%AF/" title="(十)mysql 索引失效的场景">
+                        <span class="hidden-mobile">(十)mysql 索引失效的场景</span>
                         <span class="visible-mobile">Next</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
