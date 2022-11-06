@@ -25,7 +25,7 @@
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="https://n1ck.cyou/img/mysql.png">
 <meta property="article:published_time" content="2022-11-06T06:11:53.000Z">
-<meta property="article:modified_time" content="2022-11-06T07:20:23.068Z">
+<meta property="article:modified_time" content="2022-11-06T08:12:28.219Z">
 <meta property="article:author" content="n!Ck">
 <meta property="article:tag" content="数据库">
 <meta name="twitter:card" content="summary_large_image">
@@ -221,7 +221,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          1.6k words
+          3.1k words
         
       </span>
     
@@ -232,7 +232,7 @@
         
         
         
-          14 mins
+          26 mins
         
       </span>
     
@@ -312,6 +312,55 @@
 <li>对于快照读, <code>MVCC</code> 可以保证幻读不会产生</li>
 <li>对于当前读, <code>间隙锁</code> 保证幻读不会产生</li>
 </ul>
+<h3 id="next-key-lock-加锁机制"><a href="#next-key-lock-加锁机制" class="headerlink" title="next-key lock 加锁机制"></a>next-key lock 加锁机制</h3><p>对于行锁和间隙锁,结合起来称为 <code>next-key lock</code></p>
+<p>对于 <code>next-key lock</code> 的加锁规则,遵循一下 5 个原则</p>
+<ol>
+<li>加锁的基本单位是 <code>next-key lock</code>,符合 <strong>前开后闭</strong> 原则</li>
+<li>在查询过程当中只对访问到的记录加锁,没有访问的记录不会加锁</li>
+<li>等值查询下,如果是唯一索引加锁, <code>next-key lock</code> 退化为 <code>行锁</code></li>
+<li>等值查询下,向右遍历到第一个不满足条件的记录时, <code>next-key lock</code> 退化为 <code>间隙锁</code></li>
+<li>唯一索引上的范围查询会遍历到第一个不满足条件的记录为止</li>
+</ol>
+<p>假设表有 <code>id,c,d</code> 三个记录,主键 <code>id</code> 和 普通索引 <code>c</code></p>
+<p>并且有记录 <code>(0,0,0)(5,5,5)(10,10,10)(15,15,15)(20,20,20)(25,25,25)</code></p>
+<h4 id="1-唯一索引的等值查询"><a href="#1-唯一索引的等值查询" class="headerlink" title="1. 唯一索引的等值查询"></a>1. 唯一索引的等值查询</h4><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7vh481j86j30p008gdgu.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
+<ol>
+<li>会话 A 的对 <code>(5,10]</code> 加上 <code>next-key lock</code></li>
+<li><code>id=7</code> 是一个等值查询,且主键 <code>id</code> 是一个唯一索引,所以 <code>next-key lock</code> 退化为 <code>行锁</code>,由于不存在 <code>id=7</code> 的记录,所以往右查找到第一个不满足条件的位置 <code>id=10</code> 退化为 <code>间隙锁</code> ,即 <code>(5,10)</code> </li>
+<li>最终的加锁范围 <code>(5,10)</code></li>
+</ol>
+<p>由此可见会话 B 插入 <code>id=8</code> 会被阻塞,会话 C 更新 <code>id=10</code> 可以成功</p>
+<h4 id="2-非唯一索引的等值查询"><a href="#2-非唯一索引的等值查询" class="headerlink" title="2. 非唯一索引的等值查询"></a>2. 非唯一索引的等值查询</h4><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7vh4fk7w1j30ou099wfo.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
+<ol>
+<li>会话 A 对 <code>(0,5]</code> 加上 <code>next-key lock</code></li>
+<li><code>c=5</code> 是一个等值查询,且 <code>c=5</code> 是非唯一索引,向右查找到第一个不满足条件的记录 <code>(10,10,10)</code> 这个查找过程中都会加上间隙锁 <code>(5,10]</code> ,而且 <code>c=10</code> 的记录会退化为 <code>间隙锁</code> ,即 <code>(5,10)</code></li>
+<li>最终的加锁范围 <code>(0,10)</code></li>
+</ol>
+<p>为什么 B 更新 <code>id=5</code> 的记录能够成功,不是已经有 <code>(0,10)</code> 的间隙锁吗</p>
+<p>需要注意的是,根据第 2 条原则,只对访问过的记录才加锁; 由于绘画 A 的 sql 是 <code>select id xxx</code> 可以看到通过索引 <code>c</code> 是覆盖索引的,此时不需要回表查询主键索引</p>
+<p>相当于会话 A 的查找记录只使用索引 <code>c</code> 而没有用到主键索引,所以会话 A 的加锁仅仅在索引 <code>c</code> 上生效,而会话 B 通过主键 id 更新时,是没有 <code>next-key lock</code> 存在的,所以会话 B 能够成功执行</p>
+<p>同理,会话 C 因为插入 <code>c=7</code> 的记录,会被会话 A 创建的 <code>next-key lock</code> 锁住,所以会话 C 被阻塞</p>
+<p>这个例子说明两点:</p>
+<ul>
+<li><code>lock in share mode</code> 只会锁定覆盖索引,而 <code>lock for update</code> 会把涉及到的主键索引一起加锁</li>
+<li>如果要避免 <code>lock in share mode</code> 加读锁但是数据被更新的话,就必须绕开覆盖索引,重新回表让主键索引一起加锁</li>
+</ul>
+<h4 id="3-主键索引的范围查询"><a href="#3-主键索引的范围查询" class="headerlink" title="3. 主键索引的范围查询"></a>3. 主键索引的范围查询</h4><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7vh4letudj30ou0ebq4k.jpg" srcset="/img/loading.gif" lazyload alt="img_2.png"></p>
+<ol>
+<li>会话 A 对 <code>(5,10]</code> 加上 <code>next-key lock</code> ,由于 <code>id=10</code> 是等值查询, 且是唯一索引,所以退化成 <code>行锁</code> ,即 <code>[10,10]</code> 这一行</li>
+<li>会话 A 对 <code>(10,15]</code> 加上 <code>next-key lock</code> ,由于 <code>id&lt;11</code> 是范围查询,所以会遍历到第一个不满足条件的记录位置,即 <code>(15,15,15)</code> ,此时 <code>next-key lock</code> 为 <code>(10,15]</code> </li>
+<li>最终的加锁范围 <code>[10,15]</code></li>
+</ol>
+<p>会话 B 插入 <code>id=8</code> 的记录不在 <code>next-key lock</code> 当中,操作成功,更新 <code>id=13</code> 的记录被锁住,失败阻塞</p>
+<p>会话 C 更新 <code>id=15</code> 的记录被锁住,失败阻塞</p>
+<h4 id="4-非唯一索引的范围查询"><a href="#4-非唯一索引的范围查询" class="headerlink" title="4. 非唯一索引的范围查询"></a>4. 非唯一索引的范围查询</h4><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7vh4rrlerj30ou0b2mya.jpg" srcset="/img/loading.gif" lazyload alt="img_3.png"></p>
+<ol>
+<li><code>c&gt;=10</code> 是范围查询, 会话 A 对 <code>(5,10]</code> 加上 <code>next-key lock</code>, 因为 <code>c</code> 是非唯一索引,不会退化为 <code>间隙锁</code></li>
+<li><code>c&lt;11</code> 也是范围查询,会话 A 对 <code>(10,15]</code> 加上 <code>next-key lock</code>, 同样因为 <code>c</code> 是非唯一索引,不会退化为 <code>间隙锁</code></li>
+<li>最终的加锁范围 <code>(5,10]∪(10,15] = (5,15]</code></li>
+</ol>
+<p>会话 B 插入 <code>c=8</code> 的记录被锁住,失败阻塞</p>
+<p>会话 C 更新 <code>c=15</code> 的记录被锁住,失败阻塞</p>
 
                 
               </div>
