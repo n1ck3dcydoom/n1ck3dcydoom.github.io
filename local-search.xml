@@ -4,6 +4,31 @@
   
   
   <entry>
+    <title>(十五)mysql 一主多从如何进行主从切换</title>
+    <link href="/2022/11/07/(%E5%8D%81%E4%BA%94)mysql%20%E4%B8%80%E4%B8%BB%E5%A4%9A%E4%BB%8E%E5%A6%82%E4%BD%95%E8%BF%9B%E8%A1%8C%E4%B8%BB%E4%BB%8E%E5%88%87%E6%8D%A2/"/>
+    <url>/2022/11/07/(%E5%8D%81%E4%BA%94)mysql%20%E4%B8%80%E4%B8%BB%E5%A4%9A%E4%BB%8E%E5%A6%82%E4%BD%95%E8%BF%9B%E8%A1%8C%E4%B8%BB%E4%BB%8E%E5%88%87%E6%8D%A2/</url>
+    
+    <content type="html"><![CDATA[<h3 id="一主多从的结构"><a href="#一主多从的结构" class="headerlink" title="一主多从的结构"></a>一主多从的结构</h3><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7xg26tow1j30il0dxq6q.jpg" alt="img.png"></p><p>其中 A 和 A’ 互为主备关系(即双 M 结构),BCD 三个从库同步主库 A 的数据,只提供读服务</p><p>当发生主从切换的时候,从库 A’ 当选新的主库,此时 BCD 三个库需要重新连接到新的主库 A’ 上</p><h3 id="基于位点的朴素主从切换"><a href="#基于位点的朴素主从切换" class="headerlink" title="基于位点的朴素主从切换"></a>基于位点的朴素主从切换</h3><p>以从库 B 为例,当需要把 B 的主库切换到 A’ 时,需要执行 <code>change master</code> 指令,然后需要指定新主库的 <code>ip,端口,用户名,密码,binlog 日志,以及 binlog 日志位点</code> 这 6 个值</p><p>其中 <code>binlog</code> 日志位点是比较关键的信息,包含了从库 B 应该从新的主库的 <code>binlog</code> 日志的那个位置开始同步</p><p>如果这个位置选早了,会导致重复的事务再次被同步; 如果选晚了,会导致有些事务丢失</p><p>一种同步方式为:</p><ol><li>等待新主库 A’ 完成 <code>relay log</code> 的消费</li><li>通过工具解析原主库的最后一条事务记录,得到发生主从切换时的 <code>binlog</code> 日志和对应的位点</li><li>新主库 A’ 将这个位点发给从库 B 告知从库从这里开始往后解析 <code>binlog</code></li></ol><p>这种统计方式并不准确:</p><p>假如在原来的主库在执行事务 R 之后,已经将 <code>binlog</code> 发送给从库 A’ 和从库 B,在这个 T 时刻发生了主从切换</p><p>此时 A’ 还在继续消费 A 的中转日志,从库 B 已经把刚刚接收到的事务 R 同步到自己的实例当中; 当发生主从切换时,新的主库 A’ 告知从库 B 应当从最新的位点,即原来主库的最后一条事务 R 开始执行; 这样因为从库 B<br>已经执行过事务 R 了,会产生主键重复的错误</p><p>在主从切换遇到主键冲突一般有两种解决方案:</p><ol><li>手动跳过一个事务</li><li>设置跳过指定类型的错误:例如唯一键冲突,或者删除行不存在</li></ol><p>对于第二种方案,在主从切换稳定下来之后需要再次关闭,避免真正产生数据不一致后被跳过</p><h3 id="GTID-全局事务-id"><a href="#GTID-全局事务-id" class="headerlink" title="GTID 全局事务 id"></a>GTID 全局事务 id</h3><p>根据前面事务的介绍,InnoDB 会在每个事务创建的时候,为其分配一个自增的 <code>long</code> 类型的事务 <code>trx_id</code>, 在配合上当前数据库实例的唯一 <code>server_id</code> 就构成了 <code>GTID</code><br>其定义为: <code>GTID=server_id:trx_id</code></p><p>在启动 <code>GTID</code> 之后,每个事务都有一个唯一确定的 <code>GTID</code>,有两种分配方式:</p><ol><li><code>gtid_next=automatic</code> 自增分配</li><li><code>gtid_next=&#39;current_gtid</code> 手动指定一个事务的 <code>GTID</code> 值<ul><li>若这个 <code>current_gtid</code> 已经存在于当前实例的 <code>GTID</code> 集合里面,则当前实例在拿到这条事务后会跳过不执行</li><li>若不存在于当前实例的 <code>GTID</code> 集合,则把这个 <code>GTID</code> 分配给当前即将执行的事务,然后在分配下一个 <code>GTID</code> 给下一个事务</li></ul></li></ol><p>每个实力都维护了一个 <code>GTID</code> 集合,用来记录 <strong>当前实例已经执行过的所有事务</strong></p><p>举个简单的例子:</p><p>假设实例 X 已经插入了数据 <code>(1,1)</code> 且 <code>binlog</code> 里面记录的实例 X 的 <code>insert</code> 语句之前有一条 <code>SET</code> 语句,为这个事务设置了 <code>GTID=xxx</code></p><p>实例 X 是实例 Y 的从库,而且主库 Y 也插入了一条记录 <code>(1,1)</code> 且 <code>binlog</code> 里面 <code>insert</code> 语句之前也有一条 <code>SET</code> 语句,为这个事务设置了 <code>GTID=yyy</code></p><p>若此时主库 Y 将自己的 <code>binlog</code> 发送给从库 X 进行同步,显然从库 X 会发生主键冲突的错误,导致主从同步停止</p><p>根据上面 <code>GTID</code> 分配方式的,第二种,可以手动为从库 X 将产生主键冲突的事务 <code>GTID</code> 加入到实例 X 维护的 <code>GTID</code> 集合里面,来达到跳过这条主键冲突的事务</p><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">set</span> gtid_next<span class="hljs-operator">=</span>yyy;<br><span class="hljs-keyword">begin</span>;<br><span class="hljs-keyword">commit</span>;<br><span class="hljs-keyword">set</span> gtid_next<span class="hljs-operator">=</span>automatic;<br></code></pre></td></tr></table></figure><p>这样通过提交一个 <strong>空事务</strong> 来把产生冲突的 <code>GTID</code> 加入到实例 X 维护的 <code>GTID</code> 集合里面,这样同步实例 Y 的语句时,就会跳过这条事务,也就不会再出现主键冲突; 并且在手动 <code>SET</code> 之后,还将 <code>GTID</code> 更新设置自增,这样 mysql 就可以继续按照原有的序号分配新的 <code>GTID</code> 给新的事务</p><h3 id="基于-GTID-的主从切换"><a href="#基于-GTID-的主从切换" class="headerlink" title="基于 GTID 的主从切换"></a>基于 GTID 的主从切换</h3><p>当启动了 <code>GTID</code> 后,假设新主库 A’ 的 <code>GTID</code> 集合为 <code>set_a</code>, 从库 B 的 <code>GTID</code> 集合为 <code>set_b</code></p><p>此时主从切换的过程如下:</p><ol><li>从库 B 指定新的主库 A’</li><li>从库 B 把自己的 <code>set_b</code> 发送给主库 A’</li><li>主库 A’ 计算出 <code>set_a</code> 和 <code>set_b</code> 之前的差异,找到所有存在于 <code>set_a</code> 但是不存在于 <code>set_b</code> 的集合 <code>set_a&#39;</code> ,并且判断主库 A’ 上面的 <code>binlog</code> 里面是否包含 <code>set_a&#39;</code><ul><li>如果 <code>binlog</code> 包含所有 <code>set_a&#39;</code>,就找到 <code>set_b</code> 第一个不存在的事务,并把这个事务的 <code>GTID</code> 发送给 B</li><li>如果 <code>binlog</code> 不包含,则认为 <code>binlog</code> 数据不完整,直接报错</li></ul></li><li>主库 A 从 <code>set_a&#39;</code> 里面第一个不存在于 <code>set_b</code> 的事务开始,顺序读取 <code>binlog</code> 发送给从库 B 进行主从同步</li></ol><p>这里有个大前提保证: <strong>只要产生主从关系,就必须保证主库发送给从库的 <code>binlog</code> 是完整的,否则会导致主从数据不一致</strong></p>]]></content>
+    
+    
+    <categories>
+      
+      <category>-mysql</category>
+      
+    </categories>
+    
+    
+    <tags>
+      
+      <tag>数据库</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
+  <entry>
     <title>(十四)mysql 如何保证高可用</title>
     <link href="/2022/11/07/(%E5%8D%81%E5%9B%9B)mysql%20%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E9%AB%98%E5%8F%AF%E7%94%A8/"/>
     <url>/2022/11/07/(%E5%8D%81%E5%9B%9B)mysql%20%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E9%AB%98%E5%8F%AF%E7%94%A8/</url>
