@@ -3,9 +3,9 @@ title: gin 源码解读 (二)
 date: 2022-10-29 15:44:44
 index_img: /img/gin.png
 categories:
-- gin
+  - gin
 tags:
-- 源码
+  - gin
 ---
 
 简单回顾: gin 从 `Run()` 函数启动容器之后
