@@ -5,7 +5,7 @@ index_img: /img/mysql.png
 categories:
   - mysql 
 tags:
-  - 数据库
+  - mysql
 ---
 
 ## mysql 当中索引失效的场景

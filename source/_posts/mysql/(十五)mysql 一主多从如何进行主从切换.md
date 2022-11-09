@@ -3,9 +3,9 @@ title: (十五)mysql 一主多从如何进行主从切换
 date: 2022-11-07 13:18:25
 index_img: /img/mysql.png
 categories:
-  -mysql
+  - mysql
 tags:
-  - 数据库
+  - mysql
 ---
 
 ### 一主多从的结构

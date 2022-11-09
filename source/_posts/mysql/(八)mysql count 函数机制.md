@@ -5,7 +5,7 @@ index_img: /img/mysql.png
 categories:
   - mysql
 tags:
-  - 数据库
+  - mysql
 ---
 
 ### count(*) 的实现原理

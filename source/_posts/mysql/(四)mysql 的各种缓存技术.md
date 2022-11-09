@@ -5,7 +5,7 @@ index_img: /img/mysql.png
 categories:
   - mysql
 tags:
-  - 数据库
+  - mysql
 ---
 
 ### 预读 局部性原理
