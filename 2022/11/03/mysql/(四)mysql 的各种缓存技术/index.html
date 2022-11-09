@@ -1,0 +1,764 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-default-color-scheme=dark>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/logo-Linkin-Park.png">
+  <link rel="icon" href="/img/logo-Linkin-Park.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="n!Ck">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="预读 局部性原理操作系统有个很经典的理论,叫做 局部性原理 ,意思就是说如果使用了一些数据,那么大概率接下来还会使用这些数据附近的其他数据 同时,磁盘的读写并不是按需读取,也就是说并不是需要什么数据就读取什么数据; 而是按照一定大小的页,一次性读取到内存当中,通常这个页的大小默认为 4K 因为根据局部性原理,访问了数据 x 之后,大概率还会访问 x 附近的其他数据; 而如果是按需读取的话,在访问">
+<meta property="og:type" content="article">
+<meta property="og:title" content="(四)mysql 的各种缓存技术">
+<meta property="og:url" content="https://n1ck.cyou/2022/11/03/mysql/(%E5%9B%9B)mysql%20%E7%9A%84%E5%90%84%E7%A7%8D%E7%BC%93%E5%AD%98%E6%8A%80%E6%9C%AF/index.html">
+<meta property="og:site_name" content="n!Ck playground">
+<meta property="og:description" content="预读 局部性原理操作系统有个很经典的理论,叫做 局部性原理 ,意思就是说如果使用了一些数据,那么大概率接下来还会使用这些数据附近的其他数据 同时,磁盘的读写并不是按需读取,也就是说并不是需要什么数据就读取什么数据; 而是按照一定大小的页,一次性读取到内存当中,通常这个页的大小默认为 4K 因为根据局部性原理,访问了数据 x 之后,大概率还会访问 x 附近的其他数据; 而如果是按需读取的话,在访问">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://n1ck.cyou/img/mysql.png">
+<meta property="article:published_time" content="2022-11-03T15:18:25.000Z">
+<meta property="article:modified_time" content="2022-11-09T01:15:35.010Z">
+<meta property="article:author" content="n!Ck">
+<meta property="article:tag" content="mysql">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://n1ck.cyou/img/mysql.png">
+  
+  
+  
+  <title>(四)mysql 的各种缓存技术 - n!Ck playground</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"n1ck.cyou","root":"/","version":"1.9.3","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 60vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>n!Ck playground</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                Home
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                Archives
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                Categories
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                Tags
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                About
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/page.jpeg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="(四)mysql 的各种缓存技术"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-11-03 23:18" pubdate>
+          November 3, 2022 pm
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          3k words
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          26 mins
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">(四)mysql 的各种缓存技术</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h3 id="预读-局部性原理"><a href="#预读-局部性原理" class="headerlink" title="预读 局部性原理"></a>预读 局部性原理</h3><p>操作系统有个很经典的理论,叫做 <strong>局部性原理</strong> ,意思就是说如果使用了一些数据,那么大概率接下来还会使用这些数据附近的其他数据</p>
+<p>同时,磁盘的读写并不是按需读取,也就是说并不是需要什么数据就读取什么数据; 而是按照一定大小的页,一次性读取到内存当中,通常这个页的大小默认为 <code>4K</code></p>
+<p>因为根据局部性原理,访问了数据 x 之后,大概率还会访问 x 附近的其他数据; 而如果是按需读取的话,在访问 x 之后,继续访问 y 和 z 又要进行磁盘操作,这无疑增大了 io 的消耗</p>
+<p>对于按页读取 ,可以一次性将 x 所在的那一页都放到内存里,这样以后再访问 y 或者 z,就可以直接从内存里读取,无需磁盘操作</p>
+<p>可能有疑问就是,如果 x 正好在当前页的最后一条记录,那么访问 y 或者 z 必然要再读取下一页; 实际上这种情况发生的概率非常小,即使如此,再读取下一页也比每次都访问磁盘的效率高得多,是值得接受的必要 io 消耗</p>
+<p>mysql 为了利用磁盘按页读取的能力,在其内存缓存池里面,也是按照页为单位来加载磁盘上的数据</p>
+<h3 id="mysql-如何管理缓存-读缓存-buffer-pool"><a href="#mysql-如何管理缓存-读缓存-buffer-pool" class="headerlink" title="mysql 如何管理缓存 读缓存(buffer pool)"></a>mysql 如何管理缓存 读缓存(buffer pool)</h3><p>管理缓存有个非常经典的算法, <code>LRU</code> 最近最少使用算法</p>
+<p>最常见的实现就是通过一个固定大小的双向链表,将最近一次访问的页放到链表头,这样链尾上的最长时间没有使用的页就会被淘汰置换出链表</p>
+<p><code>LRU</code> 在更新内存页的时候,又分为两种情况</p>
+<ul>
+<li>当前命中的页已经在缓存里面了,这时只需要把命中页置换到头部即可</li>
+<li>当前命中的页还不在缓存里面,这时需要通过一次磁盘 io 把磁盘页读取出来放到缓存头部</li>
+</ul>
+<p>对于一个已经装满的缓存,第一种情况只会发生置换页的操作,不会有页被淘汰;第二种情况则是会淘汰尾部的最后一页</p>
+<p>朴素 <code>LRU</code> 在很多内存缓存里面,例如 <code>MemoryCache</code> 运用的很多,但是 mysql 并没有选择朴素 <code>LRU</code> 算法,这是因为有以下两个问题</p>
+<ol>
+<li>预读失效</li>
+<li>缓存污染</li>
+</ol>
+<h4 id="预读失效"><a href="#预读失效" class="headerlink" title="预读失效"></a>预读失效</h4><p>由于 mysql 预读将部分磁盘页放到缓存里面,但是因为某些原因,这些预读出来的页并没有实际访问到,导致预读失效</p>
+<p>假设缓存大小等于 <code>10 ,且磁盘页 </code>50&#96; 被预读放入缓存,考虑如下情况</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7t6j8tn3ij30an02maa7.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
+<p>此时预读出来的页 <code>50</code> 被放到缓存头部,但是后续再也没有发生过对 <code>50</code> 的访问,这导致预读出来的数据 <code>50</code> 需要被置换 10 次后才能够被淘汰掉</p>
+<p>这使得这些未命中的预读页,在缓存里面的停留时间过长</p>
+<p>mysql 采用 <strong>改良的 LRU 算法</strong> ,将普通缓存改为 <strong>分代</strong> 设计,分为 <strong>新生代</strong> 和 <strong>老年代</strong></p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7t6jirxpjj30b504lmxj.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
+<ul>
+<li>缓存被分为两个部分 <strong>新生代</strong> 和 <strong>老年代</strong></li>
+<li>实际上是通过 4 个指针,分别维护新生代头尾和老年代头尾</li>
+<li>新页在放入缓存的时候,首先放入 <strong>老年代</strong></li>
+<li>如果 <strong>老年代</strong> 里面的页发生了命中,才会加入 <strong>新生代</strong></li>
+<li>如果 <strong>老年代</strong> 里面的页没有发生命中,那么在 <strong>更短的时间内</strong> 它将被移除缓存</li>
+</ul>
+<p>这样使得那些被预读放入缓存,但是又长时间没被使用过的页,能够尽快的从老年代里面淘汰出去</p>
+<h4 id="缓存污染"><a href="#缓存污染" class="headerlink" title="缓存污染"></a>缓存污染</h4><p>什么是缓存污染: <strong>当 mysql 发生大面积扫描数据行的时候,会将大量数据页放入缓存后,立马又再次换入新的数据页; 导致每页只在缓存里面停留非常短的时间就被置换出去</strong></p>
+<p>缓存污染将会显著导致 mysql 的性能下降</p>
+<p>例如一次全表扫描时:</p>
+<ol>
+<li>将预读页放入老年代</li>
+<li>从老年代里面访问页加入新生代</li>
+<li>下一次预读又会将全新的页刷入老年代</li>
+<li>重复 123 步骤,直到完成全表扫描</li>
+</ol>
+<p>可以看到在这样的场景下,所有的页都被放入缓存 1 次后,立马又被新的页置换掉; 从而导致原本缓存里面真正的 <strong>热数据</strong> 被大量新页挤出缓存,从而导致 mysql 的性能下降</p>
+<p>mysql 为了解决缓存污染问题,引入了 <strong>老年代停留窗口</strong> 的概念</p>
+<p>放入老年代后,如果再次命中,并不会立即放入新生代,而是要求在老年代待满多少时间后才允许进入新生代</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7t6joyl78j30ci082js4.jpg" srcset="/img/loading.gif" lazyload alt="img_2.png"></p>
+<p>假设有大量需要扫描的页需要进入缓存,此时首先进入的是老年代</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7t6k1gfkzj30hw05fq47.jpg" srcset="/img/loading.gif" lazyload alt="img_3.png"></p>
+<p>如果老年代里面装不下,即使页被访问了,也会被缓存淘汰掉</p>
+<p>这个时候缓存头部的那些高频命中的新生代热点数据,不会立马被这种大批量扫描的页给置换出去</p>
+<p>对于能够命中新生代的查询来说,此时缓存依然能够提供服务,并且性能依旧高效</p>
+<p>而对于老年代里面的页,命中后需要判断是否满足 <strong>老年代停留窗口</strong> 的时长 <code>T</code></p>
+<ul>
+<li>如果 <code>停留时长 &gt;= T</code>,则将其置换到新生代的头部,此时新生代的尾部页面会进入老年代作为的老年代的头部</li>
+<li>如果 <code>停留时长 &lt; T</code>,则只会将其置换到老年代的头部,不会进入新生代</li>
+</ul>
+<h3 id="mysql-如何管理写缓存-change-buffer"><a href="#mysql-如何管理写缓存-change-buffer" class="headerlink" title="mysql 如何管理写缓存 (change buffer)"></a>mysql 如何管理写缓存 (change buffer)</h3><p>简单回顾下读缓存在 mysql 保存了什么内容</p>
+<ol>
+<li>索引页</li>
+<li>索引页对应的数据页</li>
+</ol>
+<p>对于读请求,<code>buffer pool</code> 通过改进后的 <code>LRU</code> 算法实现缓存管理,解决 <code>预读失效</code> 和 <code>缓存污染</code> 的问题</p>
+<p>对于写请求,究竟该如何管理缓存呢,以几个例子分别分析下</p>
+<h4 id="写的页正好在-buffer-pool-里"><a href="#写的页正好在-buffer-pool-里" class="headerlink" title="写的页正好在 buffer pool 里"></a>写的页正好在 buffer pool 里</h4><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7t6ju3go6j308p072gmf.jpg" srcset="/img/loading.gif" lazyload alt="img_4.png"></p>
+<ol>
+<li>直接在页上写入数据</li>
+<li>然后写入 <code>redo log</code></li>
+</ol>
+<p>是否会出现一致性问题呢: <strong>不会</strong></p>
+<ol>
+<li>读取,会命中缓存池的页</li>
+<li>缓存池 <code>LRU</code> 数据淘汰,会将 <code>脏页</code> 刷回磁盘</li>
+<li>数据库宕机,能够从 <code>redo log</code> 中恢复数据</li>
+</ol>
+<h4 id="写的页不在-buffer-pool-里"><a href="#写的页不在-buffer-pool-里" class="headerlink" title="写的页不在 buffer pool 里"></a>写的页不在 buffer pool 里</h4><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7t6kjgoolj308j06vaaw.jpg" srcset="/img/loading.gif" lazyload alt="img_5.png"></p>
+<ol>
+<li>一次随机磁盘访问,将需要写入的页加载到缓存池里</li>
+<li>在缓存池里写入数据</li>
+<li>写入 <code>redo log</code></li>
+</ol>
+<p>由于写入页不在缓存池里,多了一次从磁盘读取对应页的操作,mysql 为了减少这一次磁盘操作,引入了写缓存 <code>change buffer</code> 的概念</p>
+<p><strong>定义:当对一张不在缓存池里且 <code>非唯一索引</code> 的页进行写入操作是时,并不会立即从磁盘里加载对应的页,而是通过在写缓存 <code>change buffer</code> 里 <code>记录</code> 当前操作,直到后面需要访问这张页的时候,在进行合并 <code>merge</code> 操作</strong></p>
+<p>这样对流程上来说带来的改变如下:</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7t6kq2mdfj30bf06xmya.jpg" srcset="/img/loading.gif" lazyload alt="img_6.png"></p>
+<ol>
+<li>没有立即从磁盘里面加载对应的数据页,而是在 <code>change buffer</code> 里面记录了一次操作</li>
+<li>写入 <code>redo log</code></li>
+</ol>
+<p>可以看到因为有写缓存的存在,其性能与读请求几乎一致</p>
+<p>同样可以分析下是否会产生一致性问题: <strong>同样也不会</strong></p>
+<ol>
+<li>数据库宕机,能够从 <code>redo log</code> 中恢复数据</li>
+<li>读取刚刚写入的数据,会有其他机制保证从磁盘里面取出旧的数据页,并和 <code>change buffer</code> 里面的记录完成合并</li>
+<li>会有机制保证 <code>change buffer</code> 里面的改动在适当的实际刷入磁盘</li>
+</ol>
+<p>如果此时发生读取操作,会发生什么呢</p>
+<ol>
+<li>发现缓存里没有对应的页,从磁盘里面随机读取一次拿到对应的页放入缓存</li>
+<li>将磁盘里面读出来的页和写缓存 <code>change buffer</code> 里面的操作进行合并 <code>merge</code> </li>
+<li>将 <code>merge</code> 后的页根据 <code>LRU</code> 算法放入缓存池的对应位置 (老年代)</li>
+</ol>
+<p>可以看到: 再写操作发生时,并不会从磁盘里面加载页到缓存里面; 实际上是在读操作到来时,才会从磁盘里面真正加载到缓存里面然后进行 <code>merge</code> 操作</p>
+<h4 id="为什么说写缓存只能用于-“非唯一索引”"><a href="#为什么说写缓存只能用于-“非唯一索引”" class="headerlink" title="为什么说写缓存只能用于 “非唯一索引”"></a>为什么说写缓存只能用于 “非唯一索引”</h4><p>这是由 <strong>一致性</strong> 决定</p>
+<p>什么是一致性? 简单回顾下: 数据库保证数据能够从一个正确的状态转换为另一个正确的状态</p>
+<p>为什么说 <code>change buffer</code> 写缓存在对于 <strong>唯一索引</strong> 的写操作时,没法保证一致性</p>
+<p>由于 <strong>唯一索引</strong> 在写入数据时,需要保证数据的 <strong>唯一性</strong>, 而 <code>change buffer</code> 在记录写入操作时,并没有去校验这条记录 <strong>是否已经存在</strong></p>
+<p>要校验数据的唯一性,必须要从磁盘里面读取出对应的索引页,以检查数据是否存在</p>
+<p>既然这次磁盘操作必不可免,那为什么不直接从磁盘里面读出放到 <code>buffer pool</code> 里,然后直接对页进行修改</p>
+<p>这样看来在中间添加一个 <code>change buffer</code> 写缓存,对于校验索引的唯一性来说,就显得毫无作用了</p>
+<h3 id="什么场景适合开启写缓存"><a href="#什么场景适合开启写缓存" class="headerlink" title="什么场景适合开启写缓存"></a>什么场景适合开启写缓存</h3><p>根据上面的分析,有以下场景适合开启写缓存</p>
+<ol>
+<li>数据库里面大多都是 <strong>非唯一索引</strong></li>
+<li>写多读少</li>
+</ol>
+<p>什么时候不适合开启写缓存</p>
+<ol>
+<li>数据库里面大多都是 <strong>唯一索引</strong></li>
+<li>读多写少 或者说 写入一个数据后,立马读它(因为写缓存没有实际写页,缓存池里面也没有页,只能从磁盘里面加载,这就导致写缓存失效)</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/mysql/" class="category-chain-item">mysql</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/mysql/">#mysql</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>(四)mysql 的各种缓存技术</div>
+      <div>https://n1ck.cyou/2022/11/03/mysql/(四)mysql 的各种缓存技术/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>Author</div>
+          <div>n!Ck</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>Posted on</div>
+          <div>November 3, 2022</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>Licensed under</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - Attribution">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/11/04/mysql/(%E4%BA%94)mysql%20%E9%94%81/" title="(五)mysql 锁">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">(五)mysql 锁</span>
+                        <span class="visible-mobile">Previous</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/11/03/mysql/(%E4%B8%89)mysql%20%E7%B4%A2%E5%BC%95%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA/" title="(三)mysql 索引深入浅出">
+                        <span class="hidden-mobile">(三)mysql 索引深入浅出</span>
+                        <span class="visible-mobile">Next</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;Table of Contents</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Search</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">Keyword</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">Blog works best with JavaScript enabled</div>
+  </noscript>
+</body>
+</html>

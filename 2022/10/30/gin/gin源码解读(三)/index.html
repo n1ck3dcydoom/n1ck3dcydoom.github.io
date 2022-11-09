@@ -1,0 +1,723 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-default-color-scheme=dark>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/logo-Linkin-Park.png">
+  <link rel="icon" href="/img/logo-Linkin-Park.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="n!Ck">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="http 连接的建立和监听前面用了介绍了 engine 容器的初始化, 处理 http 请求的流程, Router 路由树的生成和注册 接下来将了解下,一个 http 连接究竟是如何建立的,以及如何将流程扭转到 gin 去实际处理一个请求 http.ListenAndServe() 函数回到 gin.Run() 函数实现,里面有个 http.ListenAndServe(address, engi">
+<meta property="og:type" content="article">
+<meta property="og:title" content="gin 源码解读 (三)">
+<meta property="og:url" content="https://n1ck.cyou/2022/10/30/gin/gin%E6%BA%90%E7%A0%81%E8%A7%A3%E8%AF%BB(%E4%B8%89)/index.html">
+<meta property="og:site_name" content="n!Ck playground">
+<meta property="og:description" content="http 连接的建立和监听前面用了介绍了 engine 容器的初始化, 处理 http 请求的流程, Router 路由树的生成和注册 接下来将了解下,一个 http 连接究竟是如何建立的,以及如何将流程扭转到 gin 去实际处理一个请求 http.ListenAndServe() 函数回到 gin.Run() 函数实现,里面有个 http.ListenAndServe(address, engi">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://n1ck.cyou/img/gin.png">
+<meta property="article:published_time" content="2022-10-30T09:21:50.000Z">
+<meta property="article:modified_time" content="2022-11-09T01:16:15.757Z">
+<meta property="article:author" content="n!Ck">
+<meta property="article:tag" content="gin">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://n1ck.cyou/img/gin.png">
+  
+  
+  
+  <title>gin 源码解读 (三) - n!Ck playground</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"n1ck.cyou","root":"/","version":"1.9.3","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 60vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>n!Ck playground</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                Home
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                Archives
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                Categories
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                Tags
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                About
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/page.jpeg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="gin 源码解读 (三)"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-10-30 17:21" pubdate>
+          October 30, 2022 pm
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          4.6k words
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          39 mins
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">gin 源码解读 (三)</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="http-连接的建立和监听"><a href="#http-连接的建立和监听" class="headerlink" title="http 连接的建立和监听"></a>http 连接的建立和监听</h2><p>前面用了介绍了 <code>engine</code> 容器的初始化, 处理 <code>http</code> 请求的流程, <code>Router</code> 路由树的生成和注册</p>
+<p>接下来将了解下,一个 http 连接究竟是如何建立的,以及如何将流程扭转到 gin 去实际处理一个请求</p>
+<h3 id="http-ListenAndServe-函数"><a href="#http-ListenAndServe-函数" class="headerlink" title="http.ListenAndServe() 函数"></a>http.ListenAndServe() 函数</h3><p>回到 <code>gin.Run()</code> 函数实现,里面有个 <code>http.ListenAndServe(address, engine)</code> 函数</p>
+<p>通过入参和签名,很明显的告诉我们这个函数将监听在 <code>address</code> 的连接, 第二个参数 <code>engine</code> 猜测最终会把请求交给 <code>engine</code> 容器去处理</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7nfglt6d4j30is06yado.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
+<p>首先创建一个 <code>Server</code> 对象,将需要监听的地址,和处理器 (和 gin 的中间函数 <code>HandlerFunc</code> 区分下)</p>
+<p>其实这里的处理器,就是我们之前初始化的 <code>engine</code> 容器,不过 <code>engine</code> 实现了 <code>Handler</code> 接口而已</p>
+<p>这里可以充分体现出 gin 在设计上遵循 <strong>依赖接口而不是依赖实现</strong> 的原则</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7nfgu7g3rj30i1088q68.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
+<p>这里的 <code>Serve</code> 对象感觉和 java 的 <code>Socket</code> 套接字很类似,监听并 <strong>阻塞</strong> 等待</p>
+<p>既然是类似套接字,那么自然就能关闭,所以检查当前的套接字是否关闭,已经关闭了就不能再监听地址接受请求了</p>
+<p>后面就是创建 <code>tcp</code> 链接,以及处理事件</p>
+<h4 id="Listen-函数"><a href="#Listen-函数" class="headerlink" title="Listen() 函数"></a>Listen() 函数</h4><p>跟进 <code>net.Listen()</code> 函数和 <code>lc.Listen()</code> 函数</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">package</span> gin<br><br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(lc *ListenConfig)</span></span> Listen(ctx context.Context, network, address <span class="hljs-type">string</span>) (Listener, <span class="hljs-type">error</span>) &#123;<br>	DefaultResolver.resolveAddrList(ctx, <span class="hljs-string">&quot;listen&quot;</span>, network, address, <span class="hljs-literal">nil</span>)<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p><code>resolveAddrList()</code> 函数负责解析 <code>address</code> 的监听类型, 通过后面的逻辑可知,大致能够分为两类</p>
+<ol>
+<li>TCP 类型(通过 ip 地址加 port 端口,UDP 也类似)</li>
+<li>UNIX 套接字类型???</li>
+</ol>
+<p>里面都是 go 原生的网络库实现,大致逻辑如下:</p>
+<ol>
+<li>解析 <code>ip</code> 地址,解析是 <code>ipv4</code> 还是 <code>ipv6</code> 的类型</li>
+<li>尝试解析 <code>ip</code> 类型,如果不是一个合法的 <code>ip</code> 地址,就试着当做 <code>DNS</code> 地址解析</li>
+</ol>
+<p>接下来是为解析后的 <code>addr</code> 地址创建对应的的监听者对象 <code>sysListener</code> 这没什么好说的</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">package</span> gin<br><br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(lc *ListenConfig)</span></span> Listen(ctx context.Context, network, address <span class="hljs-type">string</span>) (Listener, <span class="hljs-type">error</span>) &#123;<br>	sl := &amp;sysListener&#123;<br>		ListenConfig: *lc,<br>		network:      network,<br>		address:      address,<br>	&#125;<br></code></pre></td></tr></table></figure>
+
+<p>通过这个 <code>sysListener</code> 对象来完成实际的监听行为</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">package</span> gin<br><br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(lc *ListenConfig)</span></span> Listen(ctx context.Context, network, address <span class="hljs-type">string</span>) (Listener, <span class="hljs-type">error</span>) &#123;<br>	sl.listenTCP(ctx, la)<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7nfgz7a1zj30ff04rgo3.jpg" srcset="/img/loading.gif" lazyload alt="img_2.png"></p>
+<p>这里面都涉及到 <code>unix</code> 底层的套接字编程,得到网络文件描述符 <code>fd</code> 完成后续操作,哎我也看不懂了</p>
+<p>有空还要去拜读下 <code>unix</code> 的 <code>socket</code> 套接字编程,再回头看看这里应该会清晰很多</p>
+<p>最后把创建的套接字对象 <code>fd</code> 注入到 <code>sysListener</code> 里,这样这个监听者就相当于已经就绪了,可以进行监听操作</p>
+<p>返回到 <code>http.ListenerAndServe(ln)</code> 将 <code>listen()</code> 函数创建得到的监听者 <code>ln</code> 当做参数传入</p>
+<h4 id="Serve-函数"><a href="#Serve-函数" class="headerlink" title="Serve() 函数"></a>Serve() 函数</h4><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">package</span> gin<br><br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(srv *Server)</span></span> Serve(l net.Listener) <span class="hljs-type">error</span> &#123;<br>	origListener := l<br>	l = &amp;onceCloseListener&#123;Listener: l&#125;<br>	<span class="hljs-keyword">defer</span> l.Close()<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>通过 <code>OnceCloseListener</code> 对象包裹原始的 <code>Listener</code> 对象</p>
+<p>从字面意思上来说,就是只允许调用一次 <code>Close()</code> 避免重复关闭一个已经关闭了的 <code>Listener</code></p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">package</span> gin<br><br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(srv *Server)</span></span> Serve(l net.Listener) <span class="hljs-type">error</span> &#123;<br>	<span class="hljs-keyword">if</span> !srv.trackListener(&amp;l, <span class="hljs-literal">true</span>) &#123;<br>		<span class="hljs-keyword">return</span> ErrServerClosed<br>	&#125;<br>	<span class="hljs-keyword">defer</span> srv.trackListener(&amp;l, <span class="hljs-literal">false</span>)<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>将传入的监听者 <code>ln</code> 注入到 <code>Serve</code> 对象里, defer 保证了回收 <code>Serve</code> 的时候会把 <code>ln</code> 移除掉</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">package</span> gin<br><br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(srv *Server)</span></span> Serve(l net.Listener) <span class="hljs-type">error</span> &#123;<br>	baseCtx := context.Background()<br>	<span class="hljs-comment">// ...</span><br>	ctx := context.WithValue(baseCtx, ServerContextKey, srv)<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>创建一个空的 <code>Context</code> 对象,将 <code>Serve</code> 对象注入到上下文里</p>
+<h4 id="阻塞监听"><a href="#阻塞监听" class="headerlink" title="阻塞监听"></a>阻塞监听</h4><p><strong>以上完成了所有准备,接下来开启一个死循环阻塞监听请求</strong></p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">package</span> gin<br><br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(srv *Server)</span></span> Serve(l net.Listener) <span class="hljs-type">error</span> &#123;<br>	<span class="hljs-keyword">for</span> &#123;<br>		<span class="hljs-comment">// 调用监听者的 Accept() 函数,这是个同步阻塞函数</span><br>		<span class="hljs-comment">// 2022-10-30 本人无能,套接字编程,网络文件描述符相关的操作,实在是看不懂啊</span><br>		rw, err := l.Accept()<br><br>		<span class="hljs-comment">// 当 l 监听到时间产生后, Accept() 函数返回,开始后面处理请求</span><br>		<span class="hljs-comment">// 可以通过启动 gin 的时候注册一个简单的 /ping 心跳路由</span><br>		<span class="hljs-comment">// curl 请求一下这个 /ping 路由即可</span><br><br>		<span class="hljs-comment">// 跳过监听得到的异常处理</span><br><br>		<span class="hljs-comment">// 这个 ConnContext 成员变量可以在初始化 Serve 对象的时候注入进去</span><br>		<span class="hljs-comment">// 本质是一个 func(ctx context.Context, c net.Conn) context.Context 函数变量</span><br>		<span class="hljs-comment">// 起作用是在得到一个新的 c 连接的时候,返回一个继承自 ctx 的新的上下文对象</span><br>		<span class="hljs-comment">// 具体怎么继承,以及要对这个新的上下文对象做什么处理,则有函数自行决定</span><br><br>		<span class="hljs-comment">// 这里要么使用原始的父 ctx 对象,要么通过 cc 函数得到个继承自 ctx 的新上下文对象</span><br>		connCtx := ctx<br>		<span class="hljs-keyword">if</span> cc := srv.ConnContext; cc != <span class="hljs-literal">nil</span> &#123;<br>			connCtx = cc(connCtx, rw)<br>			<span class="hljs-keyword">if</span> connCtx == <span class="hljs-literal">nil</span> &#123;<br>				<span class="hljs-built_in">panic</span>(<span class="hljs-string">&quot;ConnContext returned nil&quot;</span>)<br>			&#125;<br>		&#125;<br>		tempDelay = <span class="hljs-number">0</span><br>		<span class="hljs-comment">// 将 http 裸的连接包成 conn 对象</span><br>		c := srv.newConn(rw)<br>		c.setState(c.rwc, StateNew, runHooks) <span class="hljs-comment">// before Serve can return</span><br><br>		<span class="hljs-comment">// 启动一个协程去处理接收到的连接 conn</span><br>		<span class="hljs-keyword">go</span> c.serve(connCtx)<br>	&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p><code>Unix</code> 网络套接字编程是很复杂的,这里因为之前没有充分准备,导致很多 <code>Socket</code> 底层通过 <code>Unix</code> 提供的文件描述符进行网络操作的代码看不懂</p>
+<p>后面补充了 <code>Socket</code> 相关知识后,一定要回来再看看这里</p>
+<p>整个流程总结如下:</p>
+<ol>
+<li>Accept() 函数阻塞监听,直到请求过来返回 net.conn 裸的 http 连接</li>
+<li>如果 Accept() 返回有异常,则处理异常</li>
+<li>如果 Serve 初始化了 ConnContext 函数成员变量,这个函数会继承全局的 ctx 上下文得到一个新的上下文对象</li>
+<li>将裸的 http.conn 包装为 serve 包下面的 conn 结构,新建一个协程,使用第 3 步得到上下文去处理请求</li>
+<li>主协程通过死循环仍然继续阻塞监听 Accept() 函数,直到下一个请求进来 go to 1</li>
+</ol>
+<h4 id="实际的-serve-connCtx-函数"><a href="#实际的-serve-connCtx-函数" class="headerlink" title="实际的 serve(connCtx) 函数"></a>实际的 serve(connCtx) 函数</h4><p>接下来进一步解析这个 <code>serve()</code> 函数如何处理请求的</p>
+<p><code>serve()</code> 函数很长,挑重点解析</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">package</span> gin<br><br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(c *conn)</span></span> serve(ctx context.Context) &#123;<br>	<span class="hljs-comment">// 上下文的设置</span><br>	<span class="hljs-comment">// ...</span><br><br>	<span class="hljs-comment">// defer 定义了发生异常后的处理流程</span><br>	<span class="hljs-comment">// ...</span><br><br>	<span class="hljs-comment">// 检查和处理 tls 协议的链接,即 https 请求</span><br>	<span class="hljs-comment">// ..</span><br><br>	<span class="hljs-comment">// 非 tls 协议, http 请求的处理</span><br>	<span class="hljs-comment">// 创建一个带有</span><br>	ctx, cancelCtx := context.WithCancel(ctx)<br>	c.cancelCtx = cancelCtx<br>	<span class="hljs-keyword">defer</span> cancelCtx()<br><br>	<span class="hljs-comment">// 初始化 buffer reader 和 buffer writer</span><br>	<span class="hljs-comment">// 为读取连接和向连接发送内容做好准备</span><br>	c.r = &amp;connReader&#123;conn: c&#125;<br>	c.bufr = newBufioReader(c.r)<br>	c.bufw = newBufioWriterSize(checkConnErrorWriter&#123;c&#125;, <span class="hljs-number">4</span>&lt;&lt;<span class="hljs-number">10</span>)<br><br>	<span class="hljs-keyword">for</span> &#123;<br>		<span class="hljs-comment">// 解析请求</span><br>		w, err := c.readRequest(ctx)<br>	&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p><code>c.readRequest()</code> 函数将会实际处理 <code>conn</code> 对象的请求</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">package</span> gin<br><br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(c *conn)</span></span> readRequest(ctx context.Context) (w *response, err <span class="hljs-type">error</span>) &#123;<br>	<span class="hljs-comment">// 设置超时时间,最长读取时间,缓冲最大读取长度,等等参数</span><br>	<span class="hljs-comment">// 兼容一些老的客户端在发送 post 请求会后多带上了 /r/n 等换行符,从缓冲区读取的时候去掉这些字节</span><br>	<span class="hljs-comment">// ...</span><br><br>	<span class="hljs-comment">// 从缓冲区里读取请求内容</span><br>	req, err := readRequest(c.bufr)<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p><code>readRequest(c.bufr)</code> 函数就是按照 <code>http 1.0</code> 规范解析请求报文</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7nfh60d1sj30ne03pwi9.jpg" srcset="/img/loading.gif" lazyload alt="img_3.png"></p>
+<p>首先解析报文行,得到请求方法,请求的协议和版本</p>
+<p>紧跟着解析报文头,得到 <code>Header</code> 里面的值,处理 <code>Header</code> 里面约束的各种参数</p>
+<p>校验一些协议和版本是否兼容,校验 <code>Header</code> 参数是否合法</p>
+<p>最后通过传入的 <code>reader</code> 构造一个 <code>bufferWriter</code> 当做 <code>response</code> 的操作对象</p>
+<h4 id="通过-ServeHTTP-函数扭转处理流程"><a href="#通过-ServeHTTP-函数扭转处理流程" class="headerlink" title="通过 ServeHTTP 函数扭转处理流程"></a>通过 ServeHTTP 函数扭转处理流程</h4><p>在前面通过 <code>readRequest()</code> 解析请求后,创建对应的 <code>http.response</code></p>
+<p><strong>注意:重点来了,这个时候 go 原生的 net 网络包已经帮忙把一个 http 请求全部解析好; 这个时候就需要通过对外暴露的 ServeHTTP 接口把控制流程交给其实现类去处理; 否则请求将会由 go net 库自行处理掉</strong></p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7nfhd792kj30iy0b1dld.jpg" srcset="/img/loading.gif" lazyload alt="img_4.png"></p>
+<p>跟进这个 <code>ServeHTTP()</code> 方法,在这里面实际上调用的是 <code>server.Handerl.ServeHTTP()</code> 方法</p>
+<p>此时,终于把控制流程交给了 gin 去处理</p>
+<p>回到 gin 框架里面,如果对 gin 的流程有些忘记了的话,可以看看第一张里面关于 <code>gin 如何通过 Handler 接口实现接收和响应请求</code><br>的部分</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7kefvra9xj30jf06w42g.jpg" srcset="/img/loading.gif" lazyload alt="img_5.png"></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/gin/" class="category-chain-item">gin</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/gin/">#gin</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>gin 源码解读 (三)</div>
+      <div>https://n1ck.cyou/2022/10/30/gin/gin源码解读(三)/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>Author</div>
+          <div>n!Ck</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>Posted on</div>
+          <div>October 30, 2022</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>Licensed under</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - Attribution">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/10/31/gin/gin%E7%9A%84%E4%BA%8C%E6%AC%A1%E5%BC%80%E5%8F%91/" title="gin 的二次开发">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">gin 的二次开发</span>
+                        <span class="visible-mobile">Previous</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/10/29/gin/gin%E6%BA%90%E7%A0%81%E8%A7%A3%E8%AF%BB(%E4%BA%8C)/" title="gin 源码解读 (二)">
+                        <span class="hidden-mobile">gin 源码解读 (二)</span>
+                        <span class="visible-mobile">Next</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;Table of Contents</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Search</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">Keyword</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">Blog works best with JavaScript enabled</div>
+  </noscript>
+</body>
+</html>

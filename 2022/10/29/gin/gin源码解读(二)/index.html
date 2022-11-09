@@ -1,0 +1,710 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-default-color-scheme=dark>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/logo-Linkin-Park.png">
+  <link rel="icon" href="/img/logo-Linkin-Park.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="n!Ck">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="简单回顾: gin 从 Run() 函数启动容器之后 注册路由,添加路由中间函数的调用链 到使用 go 底层的 net 库绑定地址和端口,阻塞监听端口上的请求 到最后通过中间函数的调用链完成请求的处理 这里来看看 gin 容器是如何初始化的,都分别作了什么 gin 容器的初始化gin 提供了两个最常用的初始化方法  gin.New() gin.Default()  其中 Default() 就是在">
+<meta property="og:type" content="article">
+<meta property="og:title" content="gin 源码解读 (二)">
+<meta property="og:url" content="https://n1ck.cyou/2022/10/29/gin/gin%E6%BA%90%E7%A0%81%E8%A7%A3%E8%AF%BB(%E4%BA%8C)/index.html">
+<meta property="og:site_name" content="n!Ck playground">
+<meta property="og:description" content="简单回顾: gin 从 Run() 函数启动容器之后 注册路由,添加路由中间函数的调用链 到使用 go 底层的 net 库绑定地址和端口,阻塞监听端口上的请求 到最后通过中间函数的调用链完成请求的处理 这里来看看 gin 容器是如何初始化的,都分别作了什么 gin 容器的初始化gin 提供了两个最常用的初始化方法  gin.New() gin.Default()  其中 Default() 就是在">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://n1ck.cyou/img/gin.png">
+<meta property="article:published_time" content="2022-10-29T07:44:44.000Z">
+<meta property="article:modified_time" content="2022-11-09T01:16:15.751Z">
+<meta property="article:author" content="n!Ck">
+<meta property="article:tag" content="gin">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://n1ck.cyou/img/gin.png">
+  
+  
+  
+  <title>gin 源码解读 (二) - n!Ck playground</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"n1ck.cyou","root":"/","version":"1.9.3","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 60vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>n!Ck playground</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                Home
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                Archives
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                Categories
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                Tags
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                About
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/page.jpeg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="gin 源码解读 (二)"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-10-29 15:44" pubdate>
+          October 29, 2022 pm
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          6.8k words
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          57 mins
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">gin 源码解读 (二)</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>简单回顾: gin 从 <code>Run()</code> 函数启动容器之后</p>
+<p>注册路由,添加路由中间函数的调用链</p>
+<p>到使用 go 底层的 <code>net</code> 库绑定地址和端口,阻塞监听端口上的请求</p>
+<p>到最后通过中间函数的调用链完成请求的处理</p>
+<p>这里来看看 gin 容器是如何初始化的,都分别作了什么</p>
+<h3 id="gin-容器的初始化"><a href="#gin-容器的初始化" class="headerlink" title="gin 容器的初始化"></a>gin 容器的初始化</h3><p>gin 提供了两个最常用的初始化方法</p>
+<ol>
+<li>gin.New()</li>
+<li>gin.Default()</li>
+</ol>
+<p>其中 <code>Default()</code> 就是在 <code>New()</code> 的层面上,多添加了两个中间函数而已</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7m78mblrej30ct049dhi.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
+<p>对于 <code>New()</code> 函数来说,在这里面初始化设置了 <code>engine</code> 对象的各种属性配置</p>
+<p>比较关键的几个列出来单独说明下:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">package</span> gin<br><br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">New</span><span class="hljs-params">()</span></span> *Engine &#123;<br>	engine := &amp;Engine&#123;<br>		RouteGroup: RouteGroup&#123; <span class="hljs-comment">// 初始化路由组对象</span><br>			Handlers: <span class="hljs-literal">nil</span>,<br>			basePath: <span class="hljs-string">&quot;/&quot;</span>,<br>			root:     <span class="hljs-literal">true</span>, <span class="hljs-comment">// 设置为根节点</span><br>		&#125;,<br>		<span class="hljs-comment">// &#123;省略&#125; </span><br>		trees: <span class="hljs-built_in">make</span>(methodTrees, <span class="hljs-number">0</span>, <span class="hljs-number">9</span>) <span class="hljs-comment">// 为 9 种 http 方法初始化路由树</span><br>	&#125;<br>	<span class="hljs-comment">// 初始化 Context 池,减少上下文的频繁创建,提高内存复用率</span><br>	engine.RouterGroup.engine = engine<br>	engine.pool.New = <span class="hljs-function"><span class="hljs-keyword">func</span><span class="hljs-params">()</span></span> <span class="hljs-keyword">interface</span>&#123;&#125; &#123;<br>		<span class="hljs-keyword">return</span> engine.allocateContext()<br>	&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<h3 id="路由组的初始化"><a href="#路由组的初始化" class="headerlink" title="路由组的初始化"></a>路由组的初始化</h3><p>在有了 gin 容器之后,接下来需要做的就是为我们的 api 分类并设置路由组</p>
+<p>就是把具有类似路由 path,隶属于同一个领域的 api 聚合到一个路由组里面,方便快速的查找路由</p>
+<p>使用函数 <code>engine.Group()</code> 可以快速的聚合一组 api 路由</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7m794m97bj30o305dn26.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
+<p>继续跟进 <code>engine.combineHandlers()</code> 函数一探究竟</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7m799u5raj30mw06eaf6.jpg" srcset="/img/loading.gif" lazyload alt="img_2.png"></p>
+<p>之前接收到请求后,有个很关键的 <code>Next()</code> 函数,其遍历的所有 <code>handler</code>,都来自于路由组绑定的 <code>handlers</code></p>
+<p>至于计算绝对路径的函数很简单,就是把上一个绝对路径和当前路由的 path 拼接到一块</p>
+<h3 id="具体某个路由如何注册"><a href="#具体某个路由如何注册" class="headerlink" title="具体某个路由如何注册"></a>具体某个路由如何注册</h3><p>以 <code>engine.GET()</code> 函数为例,说一下一个具体的路由是如何注册到对应方法的路由组里去的</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7m79eu2cwj30kt02z76o.jpg" srcset="/img/loading.gif" lazyload alt="img_3.png"></p>
+<p>调用 <code>engine.handler()</code> 函数完成实际的注册</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7m79jhejxj30od047q6k.jpg" srcset="/img/loading.gif" lazyload alt="img_4.png"></p>
+<p>其中 <code>calculateAbsolutePath()</code> 和 <code>combineHandlers()</code> 不在赘述</p>
+<p>着重关注 <code>addRoute()</code> 是如何在路由树上添加路由</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">package</span> gin<br><br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(engine *Engine)</span></span> addRoute(method, path <span class="hljs-type">string</span>, handlers HandlersChain) &#123;<br>	<span class="hljs-comment">// 省略前置校验</span><br><br>	<span class="hljs-comment">// 检查当前 method 路由树的 root 节点是否存在,没有的话就创建为 root 节点</span><br>	root := engine.trees.get(method)<br>	<span class="hljs-keyword">if</span> root == <span class="hljs-literal">nil</span> &#123;<br>		root = <span class="hljs-built_in">new</span>(node)<br>		root.fullPath = <span class="hljs-string">&quot;/&quot;</span><br>		engine.trees = <span class="hljs-built_in">append</span>(engine.trees, methodTree&#123;method: method, root: root&#125;)<br>	&#125;<br>	<span class="hljs-comment">// 重中之重,对路由树(前缀树)的处理</span><br>	root.addRoute(path, handlers)<br><br>	<span class="hljs-comment">// 省略不重要的</span><br>&#125;<br></code></pre></td></tr></table></figure>
+
+<h3 id="addRoute-函数前缀树应用一探究竟"><a href="#addRoute-函数前缀树应用一探究竟" class="headerlink" title="addRoute() 函数前缀树应用一探究竟"></a>addRoute() 函数前缀树应用一探究竟</h3><p>有两个关键分支:</p>
+<ol>
+<li>root 为空创建前缀树根节点</li>
+<li>root 非空,在前缀树上插入节点</li>
+</ol>
+<h4 id="root-为空创建空节点"><a href="#root-为空创建空节点" class="headerlink" title="root 为空创建空节点"></a>root 为空创建空节点</h4><p>以这组 RESTful api 为例说明:</p>
+<figure class="highlight routeros"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs routeros">r.<span class="hljs-built_in">GET</span>(<span class="hljs-string">&quot;/cat/:id/children&quot;</span>)<br>r.<span class="hljs-built_in">GET</span>(<span class="hljs-string">&quot;/cat/play&quot;</span>)<br>r.<span class="hljs-built_in">GET</span>(<span class="hljs-string">&quot;/dog&quot;</span>)<br></code></pre></td></tr></table></figure>
+
+<p>第一次添加 <code>method</code> 的路由前缀树时,创建了空的 root 节点,在判断当前节点 <code>path</code> 长度为 0,并且没有 <code>children</code> 子节点时,就需要初始化 root 节点</p>
+<p>直接调用 <code>insertChild()</code> 函数将当前路由插入到 root 节点当中</p>
+<p>首先判断当前 path 是否包含通配符,例如 <code>/cat/:id</code></p>
+<p>首次创建 root 前缀树时,不应该直接使用 <code>/cat/:id</code> 作为 <code>full path</code> 而是需要把通配符 <code>:id</code> 单独切割出来,正确的 <code>full path</code> 应该是 <code>/cat/</code></p>
+<p>函数 <code>findWildcard()</code> 返回通配符 <code>:</code> 或者 <code>*</code> ,以及通配符规则是否符合 <code>valid</code> 和通配符所处的下标</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">package</span> gin<br><br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(n *node)</span></span> insertChild(path <span class="hljs-type">string</span>, fullPath <span class="hljs-type">string</span>, handlers HandlersChain) &#123;<br>	<span class="hljs-keyword">for</span> &#123;<br>		<span class="hljs-comment">// 找到通配符的位置</span><br>		wildcard, i, valid := findWildcard(path)<br>		<span class="hljs-comment">// 省略校验逻辑</span><br>		<span class="hljs-keyword">if</span> wildcard[<span class="hljs-number">0</span>] == <span class="hljs-string">&#x27;:&#x27;</span> &#123; <span class="hljs-comment">// param</span><br>			<span class="hljs-comment">// 如果有通配符,则把通配符前面的 path 当做 root 节点的 path,而不是带有通配符的 path</span><br>			<span class="hljs-keyword">if</span> i &gt; <span class="hljs-number">0</span> &#123;<br>				<span class="hljs-comment">// Insert prefix before the current wildcard</span><br>				n.path = path[:i]<br>				path = path[i:]<br>			&#125;<br>			<span class="hljs-comment">// 为当前 root 节点创建带有通配符的子节点</span><br>			child := &amp;node&#123;<br>				<span class="hljs-comment">// 通配符节点类型为 param,表示在路由树上有个通过参数来区分的路由节点</span><br>				nType:    param,<br>				path:     wildcard,<br>				fullPath: fullPath,<br>			&#125;<br>			<span class="hljs-comment">// 将通配符路由当做子路由添加到当前路由节点 &#x27;/cat/&#x27; 上</span><br>			n.addChild(child)<br>			<span class="hljs-comment">// 设置当前路由节点 &#x27;/cat/&#x27; 带有通配符节点</span><br>			n.wildChild = <span class="hljs-literal">true</span><br>			<span class="hljs-comment">// 更新路由树的指针,继续对通配符节点查找后续的路由树,例如 &#x27;/cat/:id/children`</span><br>			<span class="hljs-comment">// 表示列出 :id 的 cat 的所有小猫咪 :)</span><br>			<span class="hljs-comment">// 所以这里需要更新指针指向子节点,继续递归解析</span><br>			n = child<br>			<span class="hljs-comment">// 注意:这里设置的是子节点的 priority 优先级属性</span><br>			<span class="hljs-comment">// 可以看到在对 root 节点每添加一个子路由,都会让全链路的节点 priority 值 +1</span><br>			<span class="hljs-comment">// 越靠近根节点的 prioriy 值越大</span><br>			n.priority++<br><br>			<span class="hljs-comment">// 如果当前路径不是以通配符结尾, 例如 `/cat/:id/children` </span><br>			<span class="hljs-comment">// 那么会继续解析后续的 `/children` 为更深层次的路由子节点</span><br>			<span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(wildcard) &lt; <span class="hljs-built_in">len</span>(path) &#123;<br>				path = path[<span class="hljs-built_in">len</span>(wildcard):]<br>				<span class="hljs-comment">// 新添加的节点,其 prioriy 值从 1 开始计算,每过一个父节点都比下面的孩子节点大 1</span><br>				child := &amp;node&#123;<br>					priority: <span class="hljs-number">1</span>,<br>					fullPath: fullPath,<br>				&#125;<br>				n.addChild(child)<br>				n = child<br>				<span class="hljs-keyword">continue</span><br>			&#125;<br>			<span class="hljs-comment">// 添加中间函数</span><br>			n.handlers = handlers<br>			<span class="hljs-keyword">return</span><br>		&#125;<br>		<span class="hljs-comment">// 省略</span><br>	&#125;<br>&#125;<br><br></code></pre></td></tr></table></figure>
+
+<p>对于第一个带有通配符的路由 <code>/cat/:id</code></p>
+<p>在切割 <code>:id</code> 之后,得到路由为 <code>:id</code> 的通配符子节点</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7m79o3oj4j30bp050gnm.jpg" srcset="/img/loading.gif" lazyload alt="img_5.png"></p>
+<h4 id="root-节点非空-往路由前缀树继续添加子路由"><a href="#root-节点非空-往路由前缀树继续添加子路由" class="headerlink" title="root 节点非空,往路由前缀树继续添加子路由"></a>root 节点非空,往路由前缀树继续添加子路由</h4><p>回到 <code>addRoute()</code> 函数,继续看 root 非空的情况是如何处理的</p>
+<p>首先一上来就是一个 100 行的无限循环,代码有点长,仔细解读</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">package</span> gin<br><br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">addRoute</span><span class="hljs-params">()</span></span> &#123;<br>	<span class="hljs-keyword">for</span> &#123;<br>		<span class="hljs-comment">// 从 root(n) 节点开始查找最长前缀的位置索引 i</span><br>		<span class="hljs-comment">// 这个函数很简单,双指针遍历比较找到第一个不相等的位置</span><br>		i := longestCommonPrefix(path, n.path)<br><br>		<span class="hljs-comment">// 前面说过 gin 使用的紧凑型的前缀树,而非标准的字典前缀树,节省节点内存分配</span><br>		<span class="hljs-comment">// 如果当前节点是插入节点的子节点,则需要调整父子节点关系</span><br>		<span class="hljs-comment">// 例如已经插入 即 n = /cat/play/ball</span><br>		<span class="hljs-comment">// 现在插入 /cat/play</span><br>		<span class="hljs-comment">// 最后 n 变成 /cat/play, n.children = /ball</span><br>		<span class="hljs-comment">// 同理,如果继续添加路由 /cat</span><br>		<span class="hljs-comment">// n = /cat, n.c = /cat/play, n.c.c = /cat/play/ball</span><br>		<span class="hljs-keyword">if</span> i &lt; <span class="hljs-built_in">len</span>(n.path) &#123;<br>			child := node&#123;<br>				path:      n.path[i:],<br>				wildChild: n.wildChild,<br>				indices:   n.indices,<br>				children:  n.children,<br>				handlers:  n.handlers,<br>				priority:  n.priority - <span class="hljs-number">1</span>,<br>				fullPath:  n.fullPath,<br>			&#125;<br><br>			n.children = []*node&#123;&amp;child&#125;<br>			<span class="hljs-comment">// []byte for proper unicode char conversion, see #65</span><br>			n.indices = bytesconv.BytesToString([]<span class="hljs-type">byte</span>&#123;n.path[i]&#125;)<br>			n.path = path[:i]<br>			n.handlers = <span class="hljs-literal">nil</span><br>			n.wildChild = <span class="hljs-literal">false</span><br>			n.fullPath = fullPath[:parentFullPathIndex+i]<br>		&#125;<br>		<span class="hljs-comment">// 如果在先后顺序上符合父子关系,可以直接在节点 n 上创建对应的子节点</span><br>		<span class="hljs-keyword">if</span> i &lt; <span class="hljs-built_in">len</span>(path) &#123;<br>			path = path[i:]<br>			c := path[<span class="hljs-number">0</span>]<br><br>			<span class="hljs-comment">// 处理参数节点后带有 &#x27;/&#x27; 的情况</span><br>			<span class="hljs-keyword">if</span> n.nType == param &amp;&amp; c == <span class="hljs-string">&#x27;/&#x27;</span> &amp;&amp; <span class="hljs-built_in">len</span>(n.children) == <span class="hljs-number">1</span> &#123;<br>				parentFullPathIndex += <span class="hljs-built_in">len</span>(n.path)<br>				n = n.children[<span class="hljs-number">0</span>]<br>				n.priority++<br>				<span class="hljs-keyword">continue</span> walk<br>			&#125;<br><br>			<span class="hljs-comment">// 处理带有公共前缀的节点</span><br>			<span class="hljs-comment">// 解释一下 indices 的作用,这个字符串保存当前节点下所有孩子节点最长公共前缀之后出现的第一个字符</span><br>			<span class="hljs-comment">// 例如 /cat/run</span><br>			<span class="hljs-comment">// 添加 /cat/run_with_me</span><br>			<span class="hljs-comment">// run 和 run_with_me 有着公共前缀 run</span><br>			<span class="hljs-comment">// 这样 /cat/run_with_me 就会被继续拆分为子节点 _with_me</span><br>			<span class="hljs-comment">// 父节点为 /cat/run =&gt; _with_me</span><br><br>			<span class="hljs-comment">// 在举例,若有 /person/eat 和 /person/laugh</span><br>			<span class="hljs-comment">// 此时 /person 节点有 indince = le</span><br>			<span class="hljs-comment">// 添加新路由 /person/lying,此时发现 lying 和 l 有公共前缀 l</span><br>			<span class="hljs-comment">// 就会将 /laugh 节点拆分为 /l 作为父节点,包含两个子节点 augh 和 ying</span><br>			<span class="hljs-comment">// 最终 /person/ =&gt; eat 和 l</span><br>			<span class="hljs-comment">// /l =&gt; augh 和 ying ,且 a 的 indince = ay,eat 没有孩子,所以没有 indinces</span><br>			<span class="hljs-keyword">for</span> i, max := <span class="hljs-number">0</span>, <span class="hljs-built_in">len</span>(n.indices); i &lt; max; i++ &#123;<br>				<span class="hljs-keyword">if</span> c == n.indices[i] &#123;<br>					parentFullPathIndex += <span class="hljs-built_in">len</span>(n.path)<br>					i = n.incrementChildPrio(i)<br>					n = n.children[i]<br>					<span class="hljs-keyword">continue</span> walk<br>				&#125;<br>			&#125;<br><br>			<span class="hljs-comment">// 如果插入节点和当前节点不在同一个父节点上,则直接插入到前缀树里</span><br>			<span class="hljs-keyword">if</span> c != <span class="hljs-string">&#x27;:&#x27;</span> &amp;&amp; c != <span class="hljs-string">&#x27;*&#x27;</span> &amp;&amp; n.nType != catchAll &#123;<br>				<span class="hljs-comment">// []byte for proper unicode char conversion, see #65</span><br>				n.indices += bytesconv.BytesToString([]<span class="hljs-type">byte</span>&#123;c&#125;)<br>				child := &amp;node&#123;<br>					fullPath: fullPath,<br>				&#125;<br>				n.addChild(child)<br>				n.incrementChildPrio(<span class="hljs-built_in">len</span>(n.indices) - <span class="hljs-number">1</span>)<br>				n = child<br>			&#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> n.wildChild &#123;<br>				<span class="hljs-comment">// 如果当前节点是参数节点,往参数节点后面添加子节点</span><br>				n = n.children[<span class="hljs-built_in">len</span>(n.children)<span class="hljs-number">-1</span>]<br>				n.priority++<br><br>				<span class="hljs-comment">// Check if the wildcard matches</span><br>				<span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(path) &gt;= <span class="hljs-built_in">len</span>(n.path) &amp;&amp; n.path == path[:<span class="hljs-built_in">len</span>(n.path)] &amp;&amp;<br>					<span class="hljs-comment">// Adding a child to a catchAll is not possible</span><br>					n.nType != catchAll &amp;&amp;<br>					<span class="hljs-comment">// Check for longer wildcard, e.g. :name and :names</span><br>					(<span class="hljs-built_in">len</span>(n.path) &gt;= <span class="hljs-built_in">len</span>(path) || path[<span class="hljs-built_in">len</span>(n.path)] == <span class="hljs-string">&#x27;/&#x27;</span>) &#123;<br>					<span class="hljs-keyword">continue</span> walk<br>				&#125;<br><br>				<span class="hljs-comment">// Wildcard conflict</span><br>				pathSeg := path<br>				<span class="hljs-keyword">if</span> n.nType != catchAll &#123;<br>					pathSeg = strings.SplitN(pathSeg, <span class="hljs-string">&quot;/&quot;</span>, <span class="hljs-number">2</span>)[<span class="hljs-number">0</span>]<br>				&#125;<br>				prefix := fullPath[:strings.Index(fullPath, pathSeg)] + n.path<br>				<span class="hljs-built_in">panic</span>(<span class="hljs-string">&quot;&#x27;&quot;</span> + pathSeg +<br>					<span class="hljs-string">&quot;&#x27; in new path &#x27;&quot;</span> + fullPath +<br>					<span class="hljs-string">&quot;&#x27; conflicts with existing wildcard &#x27;&quot;</span> + n.path +<br>					<span class="hljs-string">&quot;&#x27; in existing prefix &#x27;&quot;</span> + prefix +<br>					<span class="hljs-string">&quot;&#x27;&quot;</span>)<br>			&#125;<br><br>			n.insertChild(path, fullPath, handlers)<br>			<span class="hljs-keyword">return</span><br>		&#125;<br><br>		<span class="hljs-comment">// Otherwise add handle to current node</span><br>		<span class="hljs-keyword">if</span> n.handlers != <span class="hljs-literal">nil</span> &#123;<br>			<span class="hljs-built_in">panic</span>(<span class="hljs-string">&quot;handlers are already registered for path &#x27;&quot;</span> + fullPath + <span class="hljs-string">&quot;&#x27;&quot;</span>)<br>		&#125;<br>		n.handlers = handlers<br>		n.fullPath = fullPath<br>		<span class="hljs-keyword">return</span><br>	&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>如果后插入的节点在 <strong>关系上</strong> 是先插入节点的父节点,则需要调整父子节点的关系</p>
+<p>原先的父节点 <code>/cat/play/ball</code> ,后插入的节点 <code>/cat/play</code></p>
+<p>从关系上来说,后者应该是前者的前驱 <code>/cat/play</code> ; 前者截断后变为子节点 <code>/ball</code></p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7m79vblj0j30a4055jsx.jpg" srcset="/img/loading.gif" lazyload alt="img_6.png"></p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7m7aa05qlj30bb0a8q6w.jpg" srcset="/img/loading.gif" lazyload alt="img_7.png"></p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><ol>
+<li>gin 使用紧凑前缀树实现路由树,减少树节点的个数,提高查找效率</li>
+<li>gin 对通配符 :xxx 和 *xxx 两种类型的参数有些特殊限制,尤其小心在 *xxx&#x2F;other 这种路由,会导致 &#x2F;other 节点失效,具体原因是因为 *xxx 节点被设置为 cathAll 类型,<br>其后面的路由不再匹配,全部由 *xxx 提供服务</li>
+<li>其中 priority 字段的设计,是为了让出现次数更多的路由前缀尽可能早的匹配到请求上,提升前缀树检索的性能</li>
+<li>其中 indinces 的设计,是为了将路由子节点尽可能多的拆分出公共前缀,这样做的目的也是为了减少路由树中路由节点的个数,提升检索性能</li>
+</ol>
+<p>总之,还是有很多细节没有列举完成,包括对通配符节点的特殊处理和判断,都没有一一解释代码了</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/gin/" class="category-chain-item">gin</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/gin/">#gin</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>gin 源码解读 (二)</div>
+      <div>https://n1ck.cyou/2022/10/29/gin/gin源码解读(二)/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>Author</div>
+          <div>n!Ck</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>Posted on</div>
+          <div>October 29, 2022</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>Licensed under</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - Attribution">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/10/30/gin/gin%E6%BA%90%E7%A0%81%E8%A7%A3%E8%AF%BB(%E4%B8%89)/" title="gin 源码解读 (三)">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">gin 源码解读 (三)</span>
+                        <span class="visible-mobile">Previous</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/10/28/gin/gin%E6%BA%90%E7%A0%81%E8%A7%A3%E8%AF%BB(%E4%B8%80)/" title="gin 源码解读 (一)">
+                        <span class="hidden-mobile">gin 源码解读 (一)</span>
+                        <span class="visible-mobile">Next</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;Table of Contents</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Search</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">Keyword</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">Blog works best with JavaScript enabled</div>
+  </noscript>
+</body>
+</html>

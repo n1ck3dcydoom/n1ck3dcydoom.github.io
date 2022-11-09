@@ -1,0 +1,776 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-default-color-scheme=dark>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/logo-Linkin-Park.png">
+  <link rel="icon" href="/img/logo-Linkin-Park.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="n!Ck">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="mysql 的索引索引数据结构的发展索引是一种数据结构,用来提高查询效率,常见的用于提高查询效率的数据结构大致可分为以下三种  hash 有序数组 搜索树  hashhash 表提供一种 k-v 的关系,当输入 key 值,可以在 O(1) 的时间复杂度内返回对应的 value 值 但是 hash 表本身是无序的,也就是说对于确定的 等值 查询,即检索在不在,有没有这种情况来说,hash 表能够胜">
+<meta property="og:type" content="article">
+<meta property="og:title" content="(三)mysql 索引深入浅出">
+<meta property="og:url" content="https://n1ck.cyou/2022/11/03/mysql/(%E4%B8%89)mysql%20%E7%B4%A2%E5%BC%95%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BA/index.html">
+<meta property="og:site_name" content="n!Ck playground">
+<meta property="og:description" content="mysql 的索引索引数据结构的发展索引是一种数据结构,用来提高查询效率,常见的用于提高查询效率的数据结构大致可分为以下三种  hash 有序数组 搜索树  hashhash 表提供一种 k-v 的关系,当输入 key 值,可以在 O(1) 的时间复杂度内返回对应的 value 值 但是 hash 表本身是无序的,也就是说对于确定的 等值 查询,即检索在不在,有没有这种情况来说,hash 表能够胜">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://n1ck.cyou/img/mysql.png">
+<meta property="article:published_time" content="2022-11-03T14:31:40.000Z">
+<meta property="article:modified_time" content="2022-11-09T01:15:35.029Z">
+<meta property="article:author" content="n!Ck">
+<meta property="article:tag" content="mysql">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://n1ck.cyou/img/mysql.png">
+  
+  
+  
+  <title>(三)mysql 索引深入浅出 - n!Ck playground</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"n1ck.cyou","root":"/","version":"1.9.3","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 60vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>n!Ck playground</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                Home
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                Archives
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                Categories
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                Tags
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                About
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/page.jpeg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="(三)mysql 索引深入浅出"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-11-03 22:31" pubdate>
+          November 3, 2022 pm
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          4.8k words
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          40 mins
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">(三)mysql 索引深入浅出</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="mysql-的索引"><a href="#mysql-的索引" class="headerlink" title="mysql 的索引"></a>mysql 的索引</h2><h3 id="索引数据结构的发展"><a href="#索引数据结构的发展" class="headerlink" title="索引数据结构的发展"></a>索引数据结构的发展</h3><p>索引是一种数据结构,用来提高查询效率,常见的用于提高查询效率的数据结构大致可分为以下三种</p>
+<ol>
+<li>hash</li>
+<li>有序数组</li>
+<li>搜索树</li>
+</ol>
+<h4 id="hash"><a href="#hash" class="headerlink" title="hash"></a>hash</h4><p>hash 表提供一种 <code>k-v</code> 的关系,当输入 <code>key</code> 值,可以在 <code>O(1)</code> 的时间复杂度内返回对应的 <code>value</code> 值</p>
+<p>但是 hash 表本身是无序的,也就是说对于确定的 <strong>等值</strong> 查询,即检索在不在,有没有这种情况来说,hash 表能够胜任</p>
+<p>但是对于范围查询,hash 表的性能表现就会非常差,因为 hash 表无法确定数据的范围,所以在对范围查询时,需要遍历整个 hash 表</p>
+<h4 id="有序数组"><a href="#有序数组" class="headerlink" title="有序数组"></a>有序数组</h4><p>有序数组的结构本身也很简单,他对范围查询提供很好的性能表现,对于等值查询,则可以借助有序的特点,使用 <code>二分查找</code> 提高查找效率</p>
+<p>但是数组的问题就在于对于元素的删除和增加操作非常麻烦,通常需要大批量连续移动若干个节点,才能保证数组的数据结构不被破坏</p>
+<p>如果采用有序链表,虽然能够提高插入和删除操作,但代价就是失去了随机访问的能力,对于 <strong>等值查询</strong> 链表则需要遍历所有节点</p>
+<h4 id="搜索树"><a href="#搜索树" class="headerlink" title="搜索树"></a>搜索树</h4><p>对于二叉搜索树来说,每个左孩子都小于父节点,每个右孩子都大于父节点,可以看做是二分查找的运用,其搜索一个节点是否存在的时间复杂度是 <code>O(logn)</code></p>
+<p>考虑最极端的情况,如果所有节点都只有左孩子,那么整棵树将退化成一条链表,此时时间复杂度退化为 <code>O(n)</code></p>
+<p>所以为了平衡这些极端情况,维持 <code>O(logn)</code> 的时间复杂度,需要树能够做出自平衡,所谓平衡就是说树中每个节点的左子树和右子树的深度之差不超过 1</p>
+<p>这种具有自平衡的二叉搜索树叫做 <code>AVL</code> 树</p>
+<p>但是数据库也放弃使用 <code>AVL</code> 树当做索引,原因如下:</p>
+<p><code>AVL</code> 树是一棵 <strong>二叉树</strong> ,每个节点只能保存两个孩子节点,如果说数据量过大,那么二叉树的深度将会变得非常深</p>
+<p>索引数据并非只存在于内存里,还需要保存到磁盘上;每个节点在磁盘上的位置并不是连续的,如果对于非常靠近叶子节点的位置,其搜索次数能够轻松达到几十上百次</p>
+<p>这样就会导致几十上百次磁盘的访问,整体的检索性能会严重被树深影响</p>
+<h4 id="B-树"><a href="#B-树" class="headerlink" title="B 树"></a>B 树</h4><p>为了解决 <code>AVL</code> 树二叉导致磁盘访问频繁的问题,引入 <strong>N 叉树</strong> 的概念</p>
+<p>根据经验, innoDB 里面的 <code>N</code> 大概在 1200 左右,对于一棵树深高度为 3 的 N 叉树,其能够保存接近 17 亿的数据</p>
+<p>这样查询一个节点,其最多也就访问 3 次磁盘而已,极大地减少了对磁盘的访问</p>
+<p>B 树在普通 N 叉树的基础上,会在节点里面同时保存数据,也就是说一个 B 树的节点不仅仅会保存索引值,还会保存对应的数据</p>
+<p>这就导致了空间的浪费,也会拖慢检索速度,举个简单的例子说明,假说一个节点值保存 8k 的内容</p>
+<p>如果节点里面的数据占用了 3k,那么剩下的索引值就只有 5k,如果本可以通过一次查询得到的索引值,由于节点上保存了数据,导致需要多次查询才能得到对应的索引值</p>
+<p>至此 mysql 索引的终极解决方案 B+ 树横空出世</p>
+<h4 id="B-树-1"><a href="#B-树-1" class="headerlink" title="B+ 树"></a>B+ 树</h4><p>B+ 树在 B 树的基础上,将中间节点保存的数据全部移除,这样中间节点就只负责保存索引值</p>
+<p>所有的数据都落到叶子节点上,这样每次查询的次数都是相同的,提高了查询的稳定性</p>
+<p>对于 B 树来说,有些数据可能在根节点,有些数据可能在叶子节点,不同的查询可能根据位置不同有较大的差异</p>
+<p>B+ 树的叶子节点按照关键字,从小到大顺序排列,并且通过前驱和后继两个指针,构成一个 <strong>双向链表</strong></p>
+<p>由于是有序排列,所以 B+ 树也能够应对范围查询</p>
+<p>对比 B 树,B+ 树的优点如下:</p>
+<ol>
+<li>由于数据按照双向链表有序组织,区间查询的性能比 B 树高</li>
+<li>所有数据分布在叶子节点上,每次查询的次数相等,稳定性比 B 树高</li>
+<li>遍历所有数据时,只需要遍历叶子节点下面的双向链表即可,不用扫描整棵树,而 B 树需要扫描整棵树</li>
+</ol>
+<h4 id="B-树-2"><a href="#B-树-2" class="headerlink" title="B* 树"></a>B* 树</h4><p>B* 树是在 B+ 树的基础上,更进一步</p>
+<p>B+ 树在插入和删除节点时,分裂与合并节点带来性能开销,为了减少节点的操作次数,B* 树在每个非叶子节点上保存了相邻兄弟节点的指针</p>
+<p>同时在初始化节点中关键字数量上,由 B+ 树的 <code>ceil(m/2)</code> 改为 <code>ciel(2m/3)</code></p>
+<p>当某个节点的关键字个数达到 <code>2m/3</code> 时,会查询相邻兄弟节点之间是否还有空余,如有的话则插入关键字向兄弟节点转移,减少了节点的分裂次数</p>
+<h3 id="聚簇索引和非聚簇索引"><a href="#聚簇索引和非聚簇索引" class="headerlink" title="聚簇索引和非聚簇索引"></a>聚簇索引和非聚簇索引</h3><p>假设当前表里存在一个主键列 id,和一个字段列 k,同时对于字段列 k 建立索引</p>
+<p>此时表的索引结构如下:</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7scjjearwj30k708hdie.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
+<p>可以看到,对于主键列的索引,叶子节点保存的内容为 <code>id - 数据</code> ,而对于非主键索引 k 来说,里面记录的内容为 <code>k - id</code></p>
+<p>根据索引的叶子节点保存的东西不同,可以把索引分为两大类</p>
+<ol>
+<li>聚簇索引: 保存数据的索引</li>
+<li>非聚簇索引: 保存主键的索引</li>
+</ol>
+<p>对于 <strong>聚簇索引和非聚簇索引,其检索有何区别</strong></p>
+<p>简单来说,在聚簇索引上的查询,只需要通过查找主键 id 就可以得到具体的数据,一次索引树的访问即可</p>
+<p>而非聚簇索引上的查询,则必须要先通过字段列查找到主键 id,然后再通过主键 id 去查找对应的数据,需要 2 次索引树的访问</p>
+<p>对于非聚簇索引上的第二次查找主键 id 的过程,称为 <strong>回表</strong></p>
+<p>由于回表多了一次索引树的查找,所以尽可能使用聚簇索引来完成数据检索</p>
+<h3 id="索引覆盖"><a href="#索引覆盖" class="headerlink" title="索引覆盖"></a>索引覆盖</h3><p>假设存在如下 sql 语句,会执行多少次查询</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> <span class="hljs-keyword">table</span> <span class="hljs-keyword">where</span> k <span class="hljs-keyword">between</span> <span class="hljs-number">3</span> <span class="hljs-keyword">and</span> <span class="hljs-number">5</span><br></code></pre></td></tr></table></figure>
+
+<ol>
+<li>从非聚簇索引 k 里面查找到 k&#x3D;3 的记录,得到主键 id&#x3D;300</li>
+<li>从聚簇索引里面查找到主键 id&#x3D;300 的记录,得到数据 R3 返回</li>
+<li>继续遍历 k&#x3D;3 的下一个数据,k&#x3D;5,得到主键 id&#x3D;500</li>
+<li>从聚簇索引里面查找到主键 id&#x3D;500 的记录,得到数据 R4 返回</li>
+<li>继续遍历 k&#x3D;5 的下一个数据,k&#x3D;6,不在查询范围内,结束</li>
+</ol>
+<p>由上一节可知,通过非聚簇索引查询聚簇索引的现象称为 <strong>回表</strong></p>
+<p>上面 5 个查询过程当中,2,4 发生 <strong>回表</strong> 查询,1,3,5 在索引列 k 上发生普通查询</p>
+<p>由于索引列 k 里面的数据只记录了主键 id,并不包含 <code>select</code> 语句后面 <code>*</code> 里面的所有数据</p>
+<p>所以不得不通过 <strong>回表</strong> 查询主键索引得到完整的数据</p>
+<p>假如我们的 sql 发生一点小小的改动</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> k <span class="hljs-keyword">from</span> <span class="hljs-keyword">table</span> <span class="hljs-keyword">where</span> k <span class="hljs-keyword">between</span> <span class="hljs-number">3</span> <span class="hljs-keyword">and</span> <span class="hljs-number">5</span><br></code></pre></td></tr></table></figure>
+
+<p>此时 <code>select</code> 语句后面只需要查询 <code>k</code> 字段列即可,通过在 k 上面的普通索引,已经包含查询的所有信息了,此时无需再回表查询其他数据</p>
+<p>这种 <strong>索引列 k 已经覆盖查询请求</strong> 的现象,称为 <strong>索引覆盖</strong></p>
+<p><strong>索引覆盖能够有效的减少回表查询的次数,因此是一种提升性能的常用手段</strong></p>
+<p><em>存储引擎和 Server 层的数据扫描统计</em></p>
+<p>需要注意的是,在上面 <strong>索引覆盖</strong> 的查询过程当中</p>
+<p>存储引擎实际扫描了 3 次,即 k&#x3D;3,&#x3D;5,&#x3D;6 然后返回数据 k&#x3D;3 和 k&#x3D;5</p>
+<p>而对于 Serve 层来说,它只从存储引擎哪里拿到了 2 条记录,所以 Server 层认为实际扫描行数只有 2 条</p>
+<h4 id="联合索引通过索引覆盖来提高查询效率"><a href="#联合索引通过索引覆盖来提高查询效率" class="headerlink" title="联合索引通过索引覆盖来提高查询效率"></a>联合索引通过索引覆盖来提高查询效率</h4><p>考虑如下场景,对于每个学生来说,都有 <code>学号</code>, <code>姓名</code>, <code>年龄</code>,</p>
+<p>通常来说,通过 <code>学号</code> 已经能够唯一定位到一个学生,因此一般都选择在 <code>学号</code> 上建立主键索引</p>
+<p>在 <code>姓名</code> 上,也创建普通索引</p>
+<p>此时查询所有姓张的同学的 <code>姓名</code> 和 <code>年龄</code></p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> name, age <span class="hljs-keyword">from</span> students <span class="hljs-keyword">where</span> name <span class="hljs-keyword">like</span> <span class="hljs-string">&#x27;张%&#x27;</span><br></code></pre></td></tr></table></figure>
+
+<p>此时是能通过 <code>姓名</code> 的索引找到所有姓张的主键 id,在通过主键 id 得到完整的数据行,最后取出 <code>姓名</code> 和 <code>年龄</code> 返回结果</p>
+<p>若存在大量的这种查询,则 <strong>回表</strong> 会明显的拖慢查询的性能</p>
+<p>若在 <code>姓名</code> 和 <code>年龄</code> 上建立联合索引 <code>name_age</code> 则查询就会变为在索引 <code>name_age</code> 里面查找姓张的同学和年龄,而索引 <code>name_age</code> 正好又包含了查询所需要的数据,此时就不用发生 <strong>回表</strong> 查询</p>
+<p>这样的联合索引,通过 <strong>索引覆盖</strong> 实现了性能的优化和提升</p>
+<h4 id="联合索引的-“最左匹配原则”-和-“最左前缀原则”"><a href="#联合索引的-“最左匹配原则”-和-“最左前缀原则”" class="headerlink" title="联合索引的 “最左匹配原则” 和 “最左前缀原则”"></a>联合索引的 “最左匹配原则” 和 “最左前缀原则”</h4><p><strong>定义:在联合索引列上,从左左侧的字段开始一直向右匹配索引,直到遇到范围查询(&gt;,&lt;,between,like),此时停止对后面的索引列的匹配</strong></p>
+<p><strong>定义:最左匹配原则同样也满足最左前缀原则</strong></p>
+<p>即对于索引 <code>name, age</code> 来说, 查询 <code>name like (&#39;张%)</code> 也能够用上索引</p>
+<p>但是对于如下查询 <code>name like (%三)</code> 此时联合索引左侧的索引列 <code>name</code> 的查询条件前缀是不确定的 <code>%</code> 通配符,此时会导致 <strong>最左前缀原则</strong> 失效,从而导致 <strong>索引失效</strong></p>
+<p>假如有联合索引 <code>(a,b,c,d)</code></p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-operator">&gt;</span> <span class="hljs-number">3</span> <span class="hljs-keyword">and</span> b <span class="hljs-operator">=</span> <span class="hljs-number">4</span> <span class="hljs-keyword">and</span> c <span class="hljs-operator">=</span> <span class="hljs-number">5</span><br><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-keyword">like</span> <span class="hljs-string">&#x27;h%&#x27;</span> <span class="hljs-keyword">and</span> b <span class="hljs-operator">=</span> <span class="hljs-string">&#x27;123&#x27;</span> <span class="hljs-keyword">and</span> c <span class="hljs-operator">=</span> <span class="hljs-string">&#x27;456&#x27;</span><br></code></pre></td></tr></table></figure>
+
+<p>这里联合索引的顺序为 a&gt;b&gt;c&gt;d,所以 <code>where</code> 语句从 <code>a</code> 开始从左往右查找是否有索引列匹配</p>
+<p><code>a &gt; 3</code> 和 <code>a like &#39;h%&#39;</code> 都是范围查询,所以根据定义可知,后面的索引列就不再匹配</p>
+<p>所以以上 2 条 sql 只有 <code>a</code> 用上了索引, <code>b</code> 和 <code>c</code> 都没有用上索引</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span>                        <span class="hljs-operator">/</span><span class="hljs-operator">/</span> a<br><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span> <span class="hljs-keyword">and</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span>              <span class="hljs-operator">/</span><span class="hljs-operator">/</span> a,b<br><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span> <span class="hljs-keyword">and</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span> <span class="hljs-keyword">and</span> c <span class="hljs-operator">=</span> <span class="hljs-number">3</span>    <span class="hljs-operator">/</span><span class="hljs-operator">/</span> a,b,c<br><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span> <span class="hljs-keyword">and</span> c <span class="hljs-operator">=</span> <span class="hljs-number">3</span>              <span class="hljs-operator">/</span><span class="hljs-operator">/</span> a<br><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span>                        <span class="hljs-operator">/</span><span class="hljs-operator">/</span> nothing<br><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span> <span class="hljs-keyword">and</span> c <span class="hljs-operator">=</span> <span class="hljs-number">3</span>              <span class="hljs-operator">/</span><span class="hljs-operator">/</span> nothing<br></code></pre></td></tr></table></figure>
+
+<p>特殊情况</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span> <span class="hljs-keyword">and</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span>              <span class="hljs-operator">/</span><span class="hljs-operator">/</span> a,b<br><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span> <span class="hljs-keyword">and</span> c <span class="hljs-operator">=</span> <span class="hljs-number">3</span> <span class="hljs-keyword">and</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span>    <span class="hljs-operator">/</span><span class="hljs-operator">/</span> a,b,c<br></code></pre></td></tr></table></figure>
+
+<p>上面 2 条 sql 语句,mysql 的优化器会自动调整字段的位置,从而使用上联合索引加快查询速度</p>
+<p><strong>总结</strong></p>
+<p>根据 <strong>空间</strong> 来决定是否需要在联合索引上,为那些不满足 <strong>最左匹配原则</strong> 的字段列再次单独建立联合索引或者单独的索引</p>
+<p>即是否又需要建立 <code>(b,d)</code> 或者 <code>(c)</code> 这样的联合索引或者单独索引,这取决于查询的频率以及是否满足 <strong>索引覆盖</strong> 来优化查询</p>
+<h3 id="索引下沉-也称为索引下推"><a href="#索引下沉-也称为索引下推" class="headerlink" title="索引下沉(也称为索引下推)"></a>索引下沉(也称为索引下推)</h3><p>对于那些不满足 <strong>最左匹配原则</strong> 的查询,用不上索引的字段列究竟如何完成检索</p>
+<p>考虑如下 sql ,同时有联合索引 <code>(name, age)</code></p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> students <span class="hljs-keyword">where</span> name <span class="hljs-keyword">like</span> <span class="hljs-string">&#x27;张%&#x27;</span> <span class="hljs-keyword">and</span> age <span class="hljs-operator">=</span> <span class="hljs-number">15</span><br></code></pre></td></tr></table></figure>
+
+<p>根据 <strong>最左匹配原则</strong> 可以用到 <code>name</code> 这个索引,因为 <code>name</code> 后面有 <code>like</code> 语句,表明这是一个范围查询,所以后面的索引列停止匹配</p>
+<p>此时假设存在以下数据:</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7scjt909lj30lj07v41k.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
+<ul>
+<li>在 mysql 5.6 版本以前,这样的查询只能通过在联合索引 <code>(name, age)</code> 上,通过 <code>name</code> 检索到第一个姓张的同学,得到对应的主键 id,然后回表查询对应的数据行,最后取出 <code>age</code> 字段返回结果集; 接着就是从 <code>name</code> 索引上依次遍历符合条件的主键 id,然后依次回表查询得到最终的完整数据</li>
+</ul>
+<p>可以看到的就是,每次查询都存在一个与之对应的回表操作,这无疑降低了查询的性能</p>
+<ul>
+<li>在 mysql 5.6 及以后的版本中,添加了一个新特性 <strong>索引下沉</strong></li>
+</ul>
+<p><strong>定义:将本来应该在 Server 层进行的过滤操作,下沉到存储引擎层完成; 在遍历索引的过程当中,预先过滤掉不满足索引条件的记录行,减少回表的次数</strong></p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7sck49cfpj30lp07zn0d.jpg" srcset="/img/loading.gif" lazyload alt="img_2.png"></p>
+<p>如果不使用索引下沉优化,则存储引擎只会根据索引 <code>name</code> 查找到所有姓张的同学,并依次回表查询到完整数据行返回给 Server 层</p>
+<p>然后在 Server 层对结果集做 <code>age = 15</code> 的判断,筛选出满足查询条件的结果集</p>
+<p>而对于使用索引下沉的优化来说,在检索联合索引 <code>(name,age)</code> 的时候,存储引擎就预先将 <code>age</code> 不满足条件的记录过滤掉; 将本来在 Server 层做的操作下沉到存储引擎层</p>
+<p>这样最终需要回表的操作就只有 2 次了,减少了回表的次数,提高查询的性能</p>
+<p><strong>索引下沉的条件,索引列中包含有待查询的字段,这样可以提前放到存储引擎来判断索引条件是否满足查询条件</strong></p>
+<p>如果查询的是 <code>name</code> 和 <code>gender</code> ,由于索引列里面不包含 <code>gender</code> 即使将 <code>gender = 1</code>下沉到存储引擎,也无法通过索引覆盖得到 <code>gender</code> 值,还是需要依次回表查询才行</p>
+<p>此时就失去了索引下沉的优化</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/mysql/" class="category-chain-item">mysql</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/mysql/">#mysql</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>(三)mysql 索引深入浅出</div>
+      <div>https://n1ck.cyou/2022/11/03/mysql/(三)mysql 索引深入浅出/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>Author</div>
+          <div>n!Ck</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>Posted on</div>
+          <div>November 3, 2022</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>Licensed under</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - Attribution">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/11/03/mysql/(%E5%9B%9B)mysql%20%E7%9A%84%E5%90%84%E7%A7%8D%E7%BC%93%E5%AD%98%E6%8A%80%E6%9C%AF/" title="(四)mysql 的各种缓存技术">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">(四)mysql 的各种缓存技术</span>
+                        <span class="visible-mobile">Previous</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/11/03/mysql/(%E4%BA%8C)mysql%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E5%8E%9F%E7%90%86/" title="(二)mysql 事务隔离原理">
+                        <span class="hidden-mobile">(二)mysql 事务隔离原理</span>
+                        <span class="visible-mobile">Next</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;Table of Contents</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Search</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">Keyword</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">Blog works best with JavaScript enabled</div>
+  </noscript>
+</body>
+</html>

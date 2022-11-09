@@ -1,0 +1,760 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-default-color-scheme=dark>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/logo-Linkin-Park.png">
+  <link rel="icon" href="/img/logo-Linkin-Park.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="n!Ck">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="双 M 结构双 M 主从切换是目前比较常用的结构,这种结构使得数据库之间互相进行同步,通过属性 readonly 来决定逻辑上的主库  主从延迟mysql 在做主从同步的时候,有几个关键的时间点如下:  主库执行完成一个事务,写入 binlog 这个时间点记为 T1 主库通过 dump_thread 将 binlog 发送给备库,备库通过 io_thread 将接收到的 binlog 写入中转日志">
+<meta property="og:type" content="article">
+<meta property="og:title" content="(十四)mysql 如何保证高可用">
+<meta property="og:url" content="https://n1ck.cyou/2022/11/07/mysql/(%E5%8D%81%E5%9B%9B)mysql%20%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E9%AB%98%E5%8F%AF%E7%94%A8/index.html">
+<meta property="og:site_name" content="n!Ck playground">
+<meta property="og:description" content="双 M 结构双 M 主从切换是目前比较常用的结构,这种结构使得数据库之间互相进行同步,通过属性 readonly 来决定逻辑上的主库  主从延迟mysql 在做主从同步的时候,有几个关键的时间点如下:  主库执行完成一个事务,写入 binlog 这个时间点记为 T1 主库通过 dump_thread 将 binlog 发送给备库,备库通过 io_thread 将接收到的 binlog 写入中转日志">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://n1ck.cyou/img/mysql.png">
+<meta property="article:published_time" content="2022-11-07T01:27:38.000Z">
+<meta property="article:modified_time" content="2022-11-09T01:15:35.041Z">
+<meta property="article:author" content="n!Ck">
+<meta property="article:tag" content="mysql">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://n1ck.cyou/img/mysql.png">
+  
+  
+  
+  <title>(十四)mysql 如何保证高可用 - n!Ck playground</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"n1ck.cyou","root":"/","version":"1.9.3","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 60vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>n!Ck playground</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                Home
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                Archives
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                Categories
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                Tags
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                About
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/page.jpeg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="(十四)mysql 如何保证高可用"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-11-07 09:27" pubdate>
+          November 7, 2022 am
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          5.1k words
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          43 mins
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">(十四)mysql 如何保证高可用</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h3 id="双-M-结构"><a href="#双-M-结构" class="headerlink" title="双 M 结构"></a>双 M 结构</h3><p>双 M 主从切换是目前比较常用的结构,这种结构使得数据库之间互相进行同步,通过属性 <code>readonly</code> 来决定逻辑上的主库</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7wbhy4xwmj30g6065jsl.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
+<h3 id="主从延迟"><a href="#主从延迟" class="headerlink" title="主从延迟"></a>主从延迟</h3><p>mysql 在做主从同步的时候,有几个关键的时间点如下:</p>
+<ol>
+<li>主库执行完成一个事务,写入 <code>binlog</code> 这个时间点记为 <code>T1</code></li>
+<li>主库通过 <code>dump_thread</code> 将 <code>binlog</code> 发送给备库,备库通过 <code>io_thread</code> 将接收到的 <code>binlog</code> 写入中转日志 <code>relay log</code> 这个时间点记为 <code>T2</code></li>
+<li>备库通过 <code>sql_thread</code> 线程消费中转日志 <code>relay log</code> 完成当前事务的时间点记为 <code>T3</code></li>
+</ol>
+<p>那么一个事务从主库到备库的 <strong>主从延迟</strong> 可以通过 <code>T1-T3</code> 得到</p>
+<p><code>binlog</code> 里每个事务有个时间段字段,这是主库执行事务写入 <code>binlog</code> 的时间,备库在做同步的时候取出这个字段和自己的服务器本地时间作对比,计算出主从延迟的具体值即为 <code>T3-T1</code></p>
+<p>如果主从库之间的系统时间不一致,备库每次同步的时候,都会向主库执行 <code>select unix_timesatmp()</code> 来获取主库的系统时间,在计算主从延迟的时候也会把这个时间加入一起计算</p>
+<p>通常来说,在网络正常的情况下, <code>T2-T1</code> 的值非常小; 即主从延迟通常体现在备库太慢上,最主要的原因就是 <strong>备库消费中转日志的速率小于主库生产 binlog 的速率</strong> </p>
+<h3 id="主从延迟的原因"><a href="#主从延迟的原因" class="headerlink" title="主从延迟的原因"></a>主从延迟的原因</h3><h4 id="备库的机器性能比主库差"><a href="#备库的机器性能比主库差" class="headerlink" title="备库的机器性能比主库差"></a>备库的机器性能比主库差</h4><p>相同的 sql 语句可能因为备库的机器性能较差从而导致备库执行的时间长于主库执行的时间,最终引发主从延迟</p>
+<p>现在几乎都是主从的机器配置保持一样,采用对称配置,避免发生主从切换时,备库的性能问题拖垮整个服务</p>
+<h4 id="备库压力过大"><a href="#备库压力过大" class="headerlink" title="备库压力过大"></a>备库压力过大</h4><p>在对称部署之后,仍然有主从延迟,还有个很常见的原因就是,备库有很多离线的计算任务</p>
+<p>通常主库对外提供服务,而备库只读,所以很多时候会把一些分析任务放到备库里面跑,结果反而占用了备库大量的 CPU 资源,最终影响到主从同步,导致主从延迟发生</p>
+<p>解决方案可以分为以下几种:</p>
+<ol>
+<li>一主多从: 使用多个备库一起分担这种需要耗费大量 CPU 资源的离线读任务</li>
+<li>将 <code>binlog</code> 直接输出到外部系统,让外部系统直接提供解析 <code>binlog</code> 的能力</li>
+</ol>
+<h4 id="大事务"><a href="#大事务" class="headerlink" title="大事务"></a>大事务</h4><p>即使配置了一主多从,保证备库的压力不会超过主库,仍然还是可能发生主从延迟</p>
+<p>如果说主库上运行了一个大事务,长达 <code>10min</code> ,那么备库在同步执行这个大事务的时候很有可能会导致主从延迟 <code>10min</code> 以上</p>
+<p>最常见的场景就是一次性使用 <code>delete</code> 语句删除大量数据,这是个典型的大事务; 包括一次性归档大量数据等</p>
+<p>最好是控制单次删除数据的量,分成多批次删除,降低事务的处理时间</p>
+<p>另一种常见的大事务场景就是对一张大表做 <code>DDL</code> 操作</p>
+<h4 id="从库的并行复制能力"><a href="#从库的并行复制能力" class="headerlink" title="从库的并行复制能力"></a>从库的并行复制能力</h4><p>如果一个从库消费中转日志 <code>relay log</code> 的速率小于主库生产 <code>binlog</code> 的速率,很有可能永远都追不上主库,导致长时间的主从延迟,如下图所示</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7wbi9bictj30ul0jjdnk.jpg" srcset="/img/loading.gif" lazyload alt="img_4.png"></p>
+<p>在 mysql 5.6 版本之前,从库的 <code>sql_thread</code> 只支持单线程,因此在主库并发高的情况下,会导致严重的主从延迟问题</p>
+<p>5.6 之后引入了多线程模型,用于解决单线程消费中转日志 <code>relay log</code> 过慢的场景</p>
+<p>类似于 <code>Netty</code> 或者 <code>Redis</code> 的网络模型,通常都是将接受网络请求的线程设为 1 个,而处理网络请求的线程设为若干个; 如果直接由若干个处理请求并发消费 <code>relay log</code> 每个线程之间都无法知道哪些日志是被消费过的,哪些日志是没有消费过的</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7wbih0idbj30rs0jaju0.jpg" srcset="/img/loading.gif" lazyload alt="img_5.png"></p>
+<p>这里面的 <code>worker</code> 数量也不能过大,因为在读写分离场景下,从库还需要提供查询能力,如果仅仅由主从同步就将全部 CPU 资源占用了的话,从库的读取能力将大幅下降</p>
+<p>mysql 在将 <code>relay log</code> 分发给不同的 <code>worker</code> 时需要满足以下两个要求</p>
+<ol>
+<li>不能造成覆盖更新,也就是更新同一行数据的多个事务,必须由一个 <code>worker</code> 顺序执行,否则将会出现其他 <code>worker</code> 的更新丢失或者覆盖当前数据</li>
+<li>同一个事务不能再拆分</li>
+</ol>
+<h4 id="按表分发策略"><a href="#按表分发策略" class="headerlink" title="按表分发策略"></a>按表分发策略</h4><p>如果说一个两个事物分别更新两个不同的表,那么可以认为是这两个事务互不影响,可以由两个 <code>worker</code> 并行执行; 但是如果事务涉及到了跨表操作,还是需要把涉及到的多张表放到一个 <code>worker</code> 执行</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7wbin3yf4j30dl0edabx.jpg" srcset="/img/loading.gif" lazyload alt="img_6.png"></p>
+<p>可以看到每个 <code>workder</code> 都维护了一个 hash 表,里面维护的是当前 <code>worker</code> 的队列里面的事务所涉及到的表, <code>key</code> 是表名, <code>value</code> 是有多少个事务涉及到</p>
+<p>当有新的事务被分配给 <code>worker</code> 时,事务里面涉及到的表就会被添加到对应的 hash 表里面, <code>worker</code> 执行完成之后就会把对应的 hash 记录移除掉</p>
+<p>图中 <code>hash_table 1</code> 表示当前 <code>worker</code> 的工作队列里面有 4 个事务涉及到 <code>db1.t1</code> 表; 有 1 个事务涉及到 <code>db1.t2</code> 表</p>
+<p><code>hash_table 2</code> 表示当前 <code>worker</code> 的工作队列里面有 1 个事务涉及到 <code>db1.t3</code> 表</p>
+<p>假设分发者从 <code>relay log</code> 日志里面消费到一个新的事务 T,这个事务的修改涉及到 <code>t1 和 t3</code> 表</p>
+<ol>
+<li>根据第一个要求,这个事务涉及到的两个表 <code>t1 和 t3</code> 需要检查这两张表上是否有其他事务正在执行</li>
+<li><code>t1</code> 表由 <code>worker1</code> 正在执行,检查 <code>t3</code> 发现正在由 <code>worker2</code> 执行,由于涉及到多表的事务只能由 1 个 <code>worker</code> 执行,所以分发者不能将 T 单独分配给 <code>worker1 或者 worker2</code> 只能等待下一次轮训</li>
+<li>假设 <code>worker2</code> 的工作先结束,从 hash 表里面移除了 <code>t3</code> 的相关记录,此时分发者发现这个多表事务只有 <code>worker1</code> 有涉及到到,就把事务 T 分发给 <code>worker1</code></li>
+<li>分发者继续处理中转日志当中的其他事务</li>
+</ol>
+<p>对于分发者来说,他的选择策略如下:</p>
+<ol>
+<li>如果当前事务跟所有 <code>worker</code> 都不冲突,则把它分给最闲的一个 <code>worker</code> 处理, 即 hash 表里面的字段最少的</li>
+<li>如果当前事务跟多个 <code>worker</code> 冲突,则等待下一次轮训,直到有且只有 1 个 <code>workder</code> 冲突时,把事务分给当前 <code>worker</code></li>
+<li>如果当前事务只有 1 个 <code>worker</code> 跟他冲突,则直接分给那个 <code>worker</code></li>
+</ol>
+<p>很明显,对于表请求负载均衡的场景,这个策略可以很好的胜任工作; 但是如果遇到一张热点表,即大量事务的更新都涉及到这一张表,此时就会把所有事务分配给同一个 <code>worker</code> ,这个模型就退化成单线程模型</p>
+<h4 id="按行分发策略"><a href="#按行分发策略" class="headerlink" title="按行分发策略"></a>按行分发策略</h4><p>按行分发策略要求如果两个事务没有更新到相同的行,则他们可以并发执行; 由于要检测事务里面的更新涉及到的具体行信息,显然 <code>binlog</code> 只能设置为 <code>row</code> 模式,因为 <code>statement</code> 模式记录的原始 sql 不会涉及到具体的行</p>
+<p>因此 <code>worker</code> 维护的 hash 表里面,就必须保存数据行的唯一性特征,这里的唯一性特征,不仅仅是主键 id,还要把表里面的唯一性索引全都考虑进去,避免出现唯一性校验不通过的情况</p>
+<p>可以看到按行分发在解析 <code>binlog</code> 时,会耗费更多的 cpu 资源,且要求表必须有主键,不得有外键,因为外键上的级联更新不会记录到 <code>binlog</code> 里面,会导致冲突检测不准确,还要求 <code>binlog</code> 格式必须是 <code>row</code></p>
+<h4 id="按库分发策略"><a href="#按库分发策略" class="headerlink" title="按库分发策略"></a>按库分发策略</h4><p>实际上,mysql 既没有采用按行分发,也没有采用按表分发,而是 <strong>按库分发</strong></p>
+<ul>
+<li><p>这样在构造 hash 表的时候就会非常快,而且占用的资源少,因为一个 db 实例上的库毕竟不会太多</p>
+</li>
+<li><p>对于 <code>binlog</code> 的格式也没有具体要求</p>
+</li>
+</ul>
+<h3 id="由于主从延迟-主从切换时应当选择什么样的策略"><a href="#由于主从延迟-主从切换时应当选择什么样的策略" class="headerlink" title="由于主从延迟,主从切换时应当选择什么样的策略"></a>由于主从延迟,主从切换时应当选择什么样的策略</h3><h4 id="可靠性优先策略"><a href="#可靠性优先策略" class="headerlink" title="可靠性优先策略"></a>可靠性优先策略</h4><p>双 M 部署的结构,具体的主从切换过程如下</p>
+<ol>
+<li>从库判断当前与主库的主从延迟时间,如果超过某个值,则不进行出从切换,循环执行当前步骤直到小于某个可以接受的时间值</li>
+<li>将主库改为只读状态 <code>readonly=true</code></li>
+<li>由于停止了对主库的写入操作,此时主从同步会慢慢地赶上进度,直到完全同步,即主从延迟时间等于 0</li>
+<li>将从库的状态改为读写 <code>readonly=false</code>,将请求切换到从库上,完成主从切换</li>
+</ol>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7wbivgw6dj30nr079wgm.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
+<p>可以看到在 <strong>可靠性优先策略</strong> 的前提下,会有一个不可用的阶段,其长度等于设定的某个可以接受的主从延迟时间值</p>
+<h4 id="可用性优先策略"><a href="#可用性优先策略" class="headerlink" title="可用性优先策略"></a>可用性优先策略</h4><p>如果非要把这个不可用时间降低到 0,那只能把第 4 步提前执行; 也就是不等待主从完成同步,直接让从库状态变为读写,然后把请求切到从库</p>
+<p>这虽然避免了不可用的情况发生,但是会出现比较严重的数据不一致问题</p>
+<p>假如表 <code>t (id, c)</code> 有两个字段,且主从库里面同时记录了 3 条数据 <code>(1,1)(2,2)(3,3)</code></p>
+<p>此时业务正在往主库里面写入两条数据分别是 <code>insert c=4, insert c=5</code></p>
+<p>如果此时已经有 <code>5s</code> 的主从延迟,当业务对主库写入 <code>c=4</code> 之后,发生主从切换,根据可用性优先策略,此时请求会立马切换到从库,即 <code>c=5</code> 的数据是向从库写入的</p>
+<p>如果此时的 <code>binlog_format=STATEMENT</code></p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7wbj1adzyj30og0j6q8r.jpg" srcset="/img/loading.gif" lazyload alt="img_2.png"></p>
+<p>根据主键自增的特性,在 <code>c=4</code> 写入主库时,插入的主键 <code>id=4</code> 实际写入数据 <code>(4,4)</code>, 而发生主从切换之后 <code>c=5</code> 写入从库时,插入的主键 <code>id=4</code> 也等于 4,实际写入的数据是 <code>(4,5)</code> </p>
+<p><code>STATEMENT</code> 格式的 <code>binlog</code> 记录了原始 sql 语句,即 <code>insert id=4</code></p>
+<p>那么在做出从同步时,新的主库接收到 <code>insert id=4</code> 由于主键 id 自增的特性,实际写入的数据是 <code>(5,4)</code></p>
+<p>而新的从库接收到 <code>insert id=5</code> 由于主键 id 自增的特性,实际写入的数据是 <code>(5,5)</code> </p>
+<p>可以看到,在 <code>id=4</code> 这条数据上,主从切换后产生了数据不一致</p>
+<p>如果说将 <code>binlog</code> 格式改为 <code>ROW</code> 呢,由于 <code>ROW</code> 格式的 <code>binlog</code> 会记录插入行的所有字段值,那么在最后的同步过程当中,会报错 <strong>主键重复</strong></p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7wbj6jomqj30gg08vmzj.jpg" srcset="/img/loading.gif" lazyload alt="img_3.png"></p>
+<p>因为新主库发送的 sql 里面,包含了主键信息,可以理解为 <code>insert (id,c) value (4,5)</code></p>
+<p>新从库发送的 sql 也包含了主键信息,可以理解为 <code>insert (id,c) value (4,4)</code></p>
+<p>这样两个库都会因为重复的主键 <code>id=4</code> 而报错</p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p><code>row</code> 格式的 <code>binlog</code> 在做主从切换的时候,如果有数据不一致的问题很快就能通过报错发现</p>
+<p>而 <code>statement</code> 格式的 <code>binlog</code> 在上述情况下是可以完成主从切换的,数据不一致的问题悄悄地发生了,严重的话可能要很久之后才会发现</p>
+<p>所以 <code>binlog</code> 配置大多数时候还是以 <code>row</code> 格式为主</p>
+<p>而且大多数时候数据的可靠性是优先于服务的可用性的,除非有特殊场景基本上都使用 <strong>可靠性优先策略</strong></p>
+<h3 id="mysql-如何检测一个库是否可用"><a href="#mysql-如何检测一个库是否可用" class="headerlink" title="mysql 如何检测一个库是否可用"></a>mysql 如何检测一个库是否可用</h3><h4 id="select-1"><a href="#select-1" class="headerlink" title="select 1"></a>select 1</h4><p>如何判断一个库是否可用,最容易想到的办法就是 <code>select 1</code> 这样类似的心跳包</p>
+<p>如果通过参数设置 mysql 的 <code>并发查询</code> 数最大只能为 3,那么下面的 <code>select 1</code> 语句将失去作用</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7y2ezbvi8j30mg075wf8.jpg" srcset="/img/loading.gif" lazyload alt="img_4.png"></p>
+<p>可以看到会话 ABC 分别开启了查询的事务,但是没有提交结束事务; 此时会话 D 的心跳语句 <code>select 1</code> 是可以正常返回的,因为 <code>select 1</code> 不是一条查询语句,mysql 直接返回 1 就结束了; 而真正的查询语句会被阻塞掉</p>
+<p>此时通过 <code>select 1</code> 判断主库是否可用的手段就失效了, <code>select 1</code> 只能检测进程是否存在,对于主库是否健康起不到检测作用</p>
+<h4 id="select-查表语句"><a href="#select-查表语句" class="headerlink" title="select 查表语句"></a>select 查表语句</h4><p>如果执行一条真正的查表语句呢? 通常在数据库里面多放一张检测心跳的表,里面就一行记录; 这样心跳包就通过对这条记录反复执行 <code>select</code> 操作,即可检测数据库实例是否健康</p>
+<p>考虑如下场景,所有的更新操作都会写 <code>redo log</code> 和 <code>binlog</code> 那如果磁盘被日志文件写满了,此时所有的更新操作都会被阻塞; 但查询语句不需要写盘,查询仍然是可用的</p>
+<p>所以通过普通的 <code>select</code> 语句也不能真正检测出一个数据库是否可用</p>
+<h4 id="update-更新语句"><a href="#update-更新语句" class="headerlink" title="update 更新语句"></a>update 更新语句</h4><p>如果执行一条更新语句呢? 在心跳检测表放一条数据,每次心跳检测都去更新这条记录,通常以写入时间戳 <code>timestamp</code> 来达到更新的操作</p>
+<p>由于一主多从结构下,主库通常有一个双 <code>M</code> 结构的从库与之进行互相同步; 写入主库 A 的 <code>binlog</code> 会发送给从库 <code>A&#39;</code>, 而写入从库 <code>A&#39;</code> 的 <code>binlog</code> 也会发送给主库 <code>A&#39;</code> 如果只有一行记录的话,很有可能产生行冲突</p>
+<p>由此可见,需要更新多行记录</p>
+<p>在心跳检测表里面插入两行记录,分别以主库和从库的 <code>server_id</code> 作为主键; 由于主从关系 mysql 保证了其 <code>server_id</code> 一定不一样; 这样各自写自己的主键 id 即可避免主键冲突</p>
+<p>多行更新仍然存在一个问题,就是判定主库不可用的时间可能会很慢</p>
+<p>正常来说当一个主库正在经历非常大压力是,其 CPU 资源几乎被大量复杂业务查询占用完; 而心跳检测只需要一条简简单单的 <code>update</code> 语句,其占用的 CPU 资源是非常少的</p>
+<p>如果心跳检测在得到一个 CPU 时间片后立马就执行成功了,此时外部仍然是认为主库可用的; 然而实际上此时主库正在经历前所未有的压力呢</p>
+<h4 id="mysql-内部的检测方法"><a href="#mysql-内部的检测方法" class="headerlink" title="mysql 内部的检测方法"></a>mysql 内部的检测方法</h4><p>上面几种都是通过外部系统去检测 mysql 是否可用,而引入外部系统必将导致系统的复杂度和不可靠度</p>
+<p>mysql 提供了内置的用于检测数据库是否可用的能力: <code>performance_schema</code> 性能检测表</p>
+<p>这张表里面记录了 IO 操作的平均耗时,最大耗时,最小耗时等等性能指标; 这样可以通过外部系统去定时采集这张表的指标数据,来检测是否可用; 避免了通过外部手段检测带来的不确定性</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/mysql/" class="category-chain-item">mysql</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/mysql/">#mysql</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>(十四)mysql 如何保证高可用</div>
+      <div>https://n1ck.cyou/2022/11/07/mysql/(十四)mysql 如何保证高可用/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>Author</div>
+          <div>n!Ck</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>Posted on</div>
+          <div>November 7, 2022</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>Licensed under</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - Attribution">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/11/07/mysql/(%E5%8D%81%E4%BA%94)mysql%20%E4%B8%80%E4%B8%BB%E5%A4%9A%E4%BB%8E%E5%A6%82%E4%BD%95%E8%BF%9B%E8%A1%8C%E4%B8%BB%E4%BB%8E%E5%88%87%E6%8D%A2/" title="(十五)mysql 一主多从如何进行主从切换">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">(十五)mysql 一主多从如何进行主从切换</span>
+                        <span class="visible-mobile">Previous</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/11/06/mysql/(%E5%8D%81%E4%B8%89)mysql%20%E4%B8%BB%E5%A4%87%E5%90%8C%E6%AD%A5/" title="(十三)mysql 主备同步">
+                        <span class="hidden-mobile">(十三)mysql 主备同步</span>
+                        <span class="visible-mobile">Next</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;Table of Contents</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Search</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">Keyword</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">Blog works best with JavaScript enabled</div>
+  </noscript>
+</body>
+</html>

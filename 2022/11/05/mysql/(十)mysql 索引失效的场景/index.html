@@ -16,21 +16,24 @@
   <meta name="author" content="n!Ck">
   <meta name="keywords" content="">
   
-    <meta name="description" content="Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any problems when using Hexo, you can find the answer in troubleshooting or you can ask me on GitHub. Quick">
+    <meta name="description" content="mysql 当中索引失效的场景索引字段使用函数思考下 mysql 为何能够通过索引快速定位数据,是因为 B+ 同层节点的有序性 如果说某些操作打破了这种有序性,那么就无法利用索引树来检索数据了,只能走全表扫描 例如 select a from t where sum(a) &gt; 5 这种对索引列做函数操作的,很有可能破坏索引的有序性 其实并不是说 mysql 对于这种函数操作完全放弃了索引,即">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Hello World">
-<meta property="og:url" content="https://n1ck.cyou/2022/10/27/hello-world/index.html">
+<meta property="og:title" content="(十)mysql 索引失效的场景">
+<meta property="og:url" content="https://n1ck.cyou/2022/11/05/mysql/(%E5%8D%81)mysql%20%E7%B4%A2%E5%BC%95%E5%A4%B1%E6%95%88%E7%9A%84%E5%9C%BA%E6%99%AF/index.html">
 <meta property="og:site_name" content="n!Ck playground">
-<meta property="og:description" content="Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any problems when using Hexo, you can find the answer in troubleshooting or you can ask me on GitHub. Quick">
+<meta property="og:description" content="mysql 当中索引失效的场景索引字段使用函数思考下 mysql 为何能够通过索引快速定位数据,是因为 B+ 同层节点的有序性 如果说某些操作打破了这种有序性,那么就无法利用索引树来检索数据了,只能走全表扫描 例如 select a from t where sum(a) &gt; 5 这种对索引列做函数操作的,很有可能破坏索引的有序性 其实并不是说 mysql 对于这种函数操作完全放弃了索引,即">
 <meta property="og:locale" content="en_US">
-<meta property="article:published_time" content="2022-10-26T16:00:00.000Z">
-<meta property="article:modified_time" content="2022-11-05T03:31:57.186Z">
+<meta property="og:image" content="https://n1ck.cyou/img/mysql.png">
+<meta property="article:published_time" content="2022-11-05T12:26:30.000Z">
+<meta property="article:modified_time" content="2022-11-09T01:15:35.035Z">
 <meta property="article:author" content="n!Ck">
+<meta property="article:tag" content="mysql">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://n1ck.cyou/img/mysql.png">
   
   
   
-  <title>Hello World - n!Ck playground</title>
+  <title>(十)mysql 索引失效的场景 - n!Ck playground</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -195,7 +198,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="Hello World"></span>
+            <span id="subtitle" data-typed-text="(十)mysql 索引失效的场景"></span>
           
         </div>
 
@@ -206,8 +209,8 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2022-10-27 00:00" pubdate>
-          October 27, 2022 am
+        <time datetime="2022-11-05 20:26" pubdate>
+          November 5, 2022 pm
         </time>
       </span>
     
@@ -218,7 +221,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          367 words
+          1.6k words
         
       </span>
     
@@ -229,7 +232,7 @@
         
         
         
-          4 mins
+          14 mins
         
       </span>
     
@@ -267,24 +270,53 @@
         <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
-            <h1 style="display: none">Hello World</h1>
+            <h1 style="display: none">(十)mysql 索引失效的场景</h1>
             
             
               <div class="markdown-body">
                 
-                <p>Welcome to <a target="_blank" rel="noopener" href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a target="_blank" rel="noopener" href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a target="_blank" rel="noopener" href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a target="_blank" rel="noopener" href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
-<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ hexo new <span class="hljs-string">&quot;My New Post&quot;</span><br></code></pre></td></tr></table></figure>
+                <h2 id="mysql-当中索引失效的场景"><a href="#mysql-当中索引失效的场景" class="headerlink" title="mysql 当中索引失效的场景"></a>mysql 当中索引失效的场景</h2><h3 id="索引字段使用函数"><a href="#索引字段使用函数" class="headerlink" title="索引字段使用函数"></a>索引字段使用函数</h3><p>思考下 mysql 为何能够通过索引快速定位数据,是因为 <code>B+</code> 同层节点的有序性</p>
+<p>如果说某些操作打破了这种有序性,那么就无法利用索引树来检索数据了,只能走全表扫描</p>
+<p>例如 <code>select a from t where sum(a) &gt; 5</code> 这种对索引列做函数操作的,很有可能破坏索引的有序性</p>
+<p>其实并不是说 mysql 对于这种函数操作完全放弃了索引,即使走全表扫描,仍然可以优化具体使用什么索引树来做全盘扫描</p>
+<p>如果字段 <code>a</code> 上建立了索引,那么扫描索引 <code>a</code> 显然比扫描主键索引更快,这是因为 <code>索引覆盖</code> 带来的优化,不用取出整行数据,索引 <code>a</code> 已经包含了列 <code>a</code> 所需要的所有数据</p>
+<p>同样的,还有更加隐蔽的操作也会导致索引失效</p>
+<p>例如 <code>select * from t where id + 1 = 10000</code> 这里 <code>+1</code> 不会破坏有效性,但是仍然无法通过 id 定位到 <code>9999</code> 这一行 因为 mysql 无法计算 <code>多少 id +1 才能等于 10000</code><br>,还是需要全表扫描</p>
+<p>如果改为 <code>where id = 10000 -1</code> 那么即可快速通过索引定位到 <code>9999</code> 行</p>
+<h3 id="隐式类型转换会导致索引失效"><a href="#隐式类型转换会导致索引失效" class="headerlink" title="隐式类型转换会导致索引失效"></a>隐式类型转换会导致索引失效</h3><p>假如存在一个 <code>varchar()</code> 类型的列 <code>order_id</code> 上建有索引, 以下 sql 会让索引失效</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> orders <span class="hljs-keyword">where</span> order_id <span class="hljs-operator">=</span> <span class="hljs-number">12345</span><br></code></pre></td></tr></table></figure>
 
-<p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/writing.html">Writing</a></p>
-<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ hexo server<br></code></pre></td></tr></table></figure>
+<p>注意到 <code>order_id</code> 本身是 <code>varchar()</code> 类型,但是 sql 语句里面却是用 <code>int</code> 整型变量在做比较,这会导致发生 <strong>隐形类型转换</strong> 从而导致索引失效</p>
+<p><strong>mysql 将数字和字符串作为比较的话,会把字符串转换为数字</strong></p>
+<p>为何隐式类型转换会导致索引失效</p>
+<p>在了解到字符串如果和数字作对比,会把字符串转换为数字之后,上面 sql 的本质就发生了改变</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> orders <span class="hljs-keyword">where</span> <span class="hljs-built_in">CAST</span>(order_id <span class="hljs-keyword">AS</span> <span class="hljs-type">int</span>) <span class="hljs-operator">=</span> <span class="hljs-number">12345</span><br></code></pre></td></tr></table></figure>
 
-<p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/server.html">Server</a></p>
-<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ hexo generate<br></code></pre></td></tr></table></figure>
+<p>可以看到这里的隐式类型转换实际上是对字符串调用了 <code>CAST()</code> 函数,而之前说过,如果在索引列上有函数操作的话,可能会破坏索引树的有序性,从而 mysql 不使用索引改用全表扫描</p>
+<p>同样的,如果在做关联查询的时候,两个连接的字段的字符编码不相同,也会触发隐式类型转换,从而导致索引失效</p>
+<h3 id="最左前缀原则"><a href="#最左前缀原则" class="headerlink" title="最左前缀原则"></a>最左前缀原则</h3><p>如果存在联合索引,则查询列里面的索引必须从最左侧开始且不允许跳过中间的索引列</p>
+<p>例如存在联合索引 <code>a,b,c</code> ,如下 sql 语句属于 <strong>全值匹配</strong> 可以命中索引</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span> <span class="hljs-keyword">and</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span> <span class="hljs-keyword">and</span> c <span class="hljs-operator">=</span> <span class="hljs-number">3</span><br></code></pre></td></tr></table></figure>
 
-<p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/generating.html">Generating</a></p>
-<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ hexo deploy<br></code></pre></td></tr></table></figure>
+<p>这里跟查询列的顺序无关,只要在逻辑上满足索引列从左到右的匹配顺序即可,myslq 优化器会在内部自动调整索引的顺序</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span> <span class="hljs-keyword">and</span> c <span class="hljs-operator">=</span> <span class="hljs-number">3</span> <span class="hljs-keyword">and</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span><br></code></pre></td></tr></table></figure>
 
-<p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
+<p><strong>非全值匹配</strong> 只要满足从左到右的前缀即可</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span> <span class="hljs-keyword">and</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span><br></code></pre></td></tr></table></figure>
+
+<p>但是不能出现缺少或者跳过,这样会导致最左前缀原则失效,从而导致索引失效</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-comment">-- 从左往右缺少 a</span><br><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span> <span class="hljs-keyword">and</span> c <span class="hljs-operator">=</span> <span class="hljs-number">3</span> <br><span class="hljs-comment">-- 跳过 b</span><br><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span> <span class="hljs-keyword">and</span> c <span class="hljs-operator">=</span> <span class="hljs-number">3</span><br></code></pre></td></tr></table></figure>
+
+<p>同样对于模糊查找也必须满足最左前缀原则</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-comment">-- 模糊检索最左前缀 a 是确定的,后面 % 才是通配符,符合最左前缀原则,可以命中索引 a</span><br><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-keyword">like</span> <span class="hljs-string">&#x27;a%&#x27;</span><br><br><span class="hljs-comment">-- 最左前缀 % 是通配符,属于不确定的,破坏了最左前缀原则,不能命中索引 a</span><br><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-keyword">like</span> <span class="hljs-string">&#x27;%a&#x27;</span><br></code></pre></td></tr></table></figure>
+
+<h3 id="使用-OR-关键字"><a href="#使用-OR-关键字" class="headerlink" title="使用 OR 关键字"></a>使用 OR 关键字</h3><p>例如只有列 <code>a</code> 有索引</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> t <span class="hljs-keyword">where</span> a <span class="hljs-operator">=</span> <span class="hljs-number">1</span> <span class="hljs-keyword">or</span> b <span class="hljs-operator">=</span> <span class="hljs-number">2</span><br></code></pre></td></tr></table></figure>
+
+<p>此时会导致索引失效,假设只有 <code>where b = 2</code> 此时肯定是全表扫描,已经得到 <code>a,b</code> 的值,就不用再遍历 <code>a</code> 的索引了; 否则使用 <code>a</code> 的索引后还需要一次全表扫描才能判断 <code>b</code> 的条件</p>
+<p>使用 <code>or</code> 关键字的时候,必须保证两边都有索引才可以</p>
+<h3 id="负向查询"><a href="#负向查询" class="headerlink" title="负向查询"></a>负向查询</h3><p>常见的负向查询有 <code>NOT, IS NOT NULL, !=, NOT IN, NOT LIKE</code> 等</p>
+<p>这些查询不一定会导致索引失效,mysql 在实际执行的过程当中,根据优化器的判断决定是否选择索引,亦或者是全表扫描</p>
 
                 
               </div>
@@ -293,6 +325,34 @@
             <div>
               <div class="post-metas my-3">
   
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/mysql/" class="category-chain-item">mysql</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/mysql/">#mysql</a>
+      
+    </div>
   
 </div>
 
@@ -302,8 +362,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>Hello World</div>
-      <div>https://n1ck.cyou/2022/10/27/hello-world/</div>
+      <div>(十)mysql 索引失效的场景</div>
+      <div>https://n1ck.cyou/2022/11/05/mysql/(十)mysql 索引失效的场景/</div>
     </div>
     <div class="license-meta">
       
@@ -315,7 +375,7 @@
       
         <div class="license-meta-item license-meta-date">
           <div>Posted on</div>
-          <div>October 27, 2022</div>
+          <div>November 5, 2022</div>
         </div>
       
       
@@ -347,15 +407,21 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2022/10/28/gin/gin%E6%BA%90%E7%A0%81%E8%A7%A3%E8%AF%BB(%E4%B8%80)/" title="gin 源码解读 (一)">
+                      <a href="/2022/11/06/mysql/(%E5%8D%81%E4%B8%80)mysql%20%E5%B9%BB%E8%AF%BB%E5%92%8C%20next-key%20lock/" title="(十一)mysql 幻读和 next-key lock">
                         <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">gin 源码解读 (一)</span>
+                        <span class="hidden-mobile">(十一)mysql 幻读和 next-key lock</span>
                         <span class="visible-mobile">Previous</span>
                       </a>
                     
                   </article>
                   <article class="post-next col-6">
                     
+                    
+                      <a href="/2022/11/05/mysql/(%E4%B9%9D)mysql%20order%20by%20%E5%8E%9F%E7%90%86%E7%BB%86%E8%8A%82/" title="(九)mysql order by 原理细节">
+                        <span class="hidden-mobile">(九)mysql order by 原理细节</span>
+                        <span class="visible-mobile">Next</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
                     
                   </article>
                 </div>

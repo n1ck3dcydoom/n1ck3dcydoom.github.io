@@ -221,7 +221,7 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/08/(%E5%8D%81%E5%85%AD)mysql%20%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/" target="_self">
+        <a href="/2022/11/08/mysql/(%E5%8D%81%E5%85%AD)mysql%20%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/" target="_self">
           <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(十六)mysql 读写分离">
         </a>
       </div>
@@ -229,13 +229,13 @@
     <article class="col-12 col-md-8 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/2022/11/08/(%E5%8D%81%E5%85%AD)mysql%20%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/" target="_self">
+        <a href="/2022/11/08/mysql/(%E5%8D%81%E5%85%AD)mysql%20%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/" target="_self">
           (十六)mysql 读写分离
         </a>
       </h1>
 
       
-      <a class="index-excerpt " href="/2022/11/08/(%E5%8D%81%E5%85%AD)mysql%20%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/" target="_self">
+      <a class="index-excerpt " href="/2022/11/08/mysql/(%E5%8D%81%E5%85%AD)mysql%20%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/" target="_self">
         <div>
           一主多从架构下的读写分离先回顾下一主多从的结构图  读写分离的主要目的就是为了 分摊主库上的请求压力 ,上面的架构主要是在 client 客户端主动做负载均衡; 在这种模式下,会把数据库的配置信息放到客户端的连接层,由客户端主动选择处理写请求和读请求的数据库实例 还有一种就是在客户端和数据库之间新增一个代理网关(正向代理:发送方不知道实际处理方是谁,只知道一个处理方代理),这样客户端就不用区分读写
         </div>
@@ -276,7 +276,7 @@
           <div class="post-meta">
             <i class="iconfont icon-tags"></i>
             
-              <a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/">#数据库</a>
+              <a href="/tags/mysql/">#mysql</a>
             
           </div>
         
@@ -288,7 +288,7 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/07/(%E5%8D%81%E4%BA%94)mysql%20%E4%B8%80%E4%B8%BB%E5%A4%9A%E4%BB%8E%E5%A6%82%E4%BD%95%E8%BF%9B%E8%A1%8C%E4%B8%BB%E4%BB%8E%E5%88%87%E6%8D%A2/" target="_self">
+        <a href="/2022/11/07/mysql/(%E5%8D%81%E4%BA%94)mysql%20%E4%B8%80%E4%B8%BB%E5%A4%9A%E4%BB%8E%E5%A6%82%E4%BD%95%E8%BF%9B%E8%A1%8C%E4%B8%BB%E4%BB%8E%E5%88%87%E6%8D%A2/" target="_self">
           <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(十五)mysql 一主多从如何进行主从切换">
         </a>
       </div>
@@ -296,13 +296,13 @@
     <article class="col-12 col-md-8 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/2022/11/07/(%E5%8D%81%E4%BA%94)mysql%20%E4%B8%80%E4%B8%BB%E5%A4%9A%E4%BB%8E%E5%A6%82%E4%BD%95%E8%BF%9B%E8%A1%8C%E4%B8%BB%E4%BB%8E%E5%88%87%E6%8D%A2/" target="_self">
+        <a href="/2022/11/07/mysql/(%E5%8D%81%E4%BA%94)mysql%20%E4%B8%80%E4%B8%BB%E5%A4%9A%E4%BB%8E%E5%A6%82%E4%BD%95%E8%BF%9B%E8%A1%8C%E4%B8%BB%E4%BB%8E%E5%88%87%E6%8D%A2/" target="_self">
           (十五)mysql 一主多从如何进行主从切换
         </a>
       </h1>
 
       
-      <a class="index-excerpt " href="/2022/11/07/(%E5%8D%81%E4%BA%94)mysql%20%E4%B8%80%E4%B8%BB%E5%A4%9A%E4%BB%8E%E5%A6%82%E4%BD%95%E8%BF%9B%E8%A1%8C%E4%B8%BB%E4%BB%8E%E5%88%87%E6%8D%A2/" target="_self">
+      <a class="index-excerpt " href="/2022/11/07/mysql/(%E5%8D%81%E4%BA%94)mysql%20%E4%B8%80%E4%B8%BB%E5%A4%9A%E4%BB%8E%E5%A6%82%E4%BD%95%E8%BF%9B%E8%A1%8C%E4%B8%BB%E4%BB%8E%E5%88%87%E6%8D%A2/" target="_self">
         <div>
           一主多从的结构 其中 A 和 A’ 互为主备关系(即双 M 结构),BCD 三个从库同步主库 A 的数据,只提供读服务 当发生主从切换的时候,从库 A’ 当选新的主库,此时 BCD 三个库需要重新连接到新的主库 A’ 上 基于位点的朴素主从切换以从库 B 为例,当需要把 B 的主库切换到 A’ 时,需要执行 change master 指令,然后需要指定新主库的 ip,端口,用户名,密码,binl
         </div>
@@ -328,7 +328,7 @@
     
       <span class="category-chain">
         
-  <a href="/categories/mysql/" class="category-chain-item">-mysql</a>
+  <a href="/categories/mysql/" class="category-chain-item">mysql</a>
   
   
 
@@ -343,7 +343,7 @@
           <div class="post-meta">
             <i class="iconfont icon-tags"></i>
             
-              <a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/">#数据库</a>
+              <a href="/tags/mysql/">#mysql</a>
             
           </div>
         
@@ -355,7 +355,7 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/07/(%E5%8D%81%E5%9B%9B)mysql%20%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E9%AB%98%E5%8F%AF%E7%94%A8/" target="_self">
+        <a href="/2022/11/07/mysql/(%E5%8D%81%E5%9B%9B)mysql%20%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E9%AB%98%E5%8F%AF%E7%94%A8/" target="_self">
           <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(十四)mysql 如何保证高可用">
         </a>
       </div>
@@ -363,13 +363,13 @@
     <article class="col-12 col-md-8 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/2022/11/07/(%E5%8D%81%E5%9B%9B)mysql%20%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E9%AB%98%E5%8F%AF%E7%94%A8/" target="_self">
+        <a href="/2022/11/07/mysql/(%E5%8D%81%E5%9B%9B)mysql%20%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E9%AB%98%E5%8F%AF%E7%94%A8/" target="_self">
           (十四)mysql 如何保证高可用
         </a>
       </h1>
 
       
-      <a class="index-excerpt " href="/2022/11/07/(%E5%8D%81%E5%9B%9B)mysql%20%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E9%AB%98%E5%8F%AF%E7%94%A8/" target="_self">
+      <a class="index-excerpt " href="/2022/11/07/mysql/(%E5%8D%81%E5%9B%9B)mysql%20%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E9%AB%98%E5%8F%AF%E7%94%A8/" target="_self">
         <div>
           双 M 结构双 M 主从切换是目前比较常用的结构,这种结构使得数据库之间互相进行同步,通过属性 readonly 来决定逻辑上的主库  主从延迟mysql 在做主从同步的时候,有几个关键的时间点如下:  主库执行完成一个事务,写入 binlog 这个时间点记为 T1 主库通过 dump_thread 将 binlog 发送给备库,备库通过 io_thread 将接收到的 binlog 写入中转日志
         </div>
@@ -410,7 +410,7 @@
           <div class="post-meta">
             <i class="iconfont icon-tags"></i>
             
-              <a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/">#数据库</a>
+              <a href="/tags/mysql/">#mysql</a>
             
           </div>
         
@@ -422,7 +422,7 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/06/(%E5%8D%81%E4%B8%89)mysql%20%E4%B8%BB%E5%A4%87%E5%90%8C%E6%AD%A5/" target="_self">
+        <a href="/2022/11/06/mysql/(%E5%8D%81%E4%B8%89)mysql%20%E4%B8%BB%E5%A4%87%E5%90%8C%E6%AD%A5/" target="_self">
           <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(十三)mysql 主备同步">
         </a>
       </div>
@@ -430,13 +430,13 @@
     <article class="col-12 col-md-8 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/2022/11/06/(%E5%8D%81%E4%B8%89)mysql%20%E4%B8%BB%E5%A4%87%E5%90%8C%E6%AD%A5/" target="_self">
+        <a href="/2022/11/06/mysql/(%E5%8D%81%E4%B8%89)mysql%20%E4%B8%BB%E5%A4%87%E5%90%8C%E6%AD%A5/" target="_self">
           (十三)mysql 主备同步
         </a>
       </h1>
 
       
-      <a class="index-excerpt " href="/2022/11/06/(%E5%8D%81%E4%B8%89)mysql%20%E4%B8%BB%E5%A4%87%E5%90%8C%E6%AD%A5/" target="_self">
+      <a class="index-excerpt " href="/2022/11/06/mysql/(%E5%8D%81%E4%B8%89)mysql%20%E4%B8%BB%E5%A4%87%E5%90%8C%E6%AD%A5/" target="_self">
         <div>
           mysql 主备同步的过程 对于主节点 A 来说,记录一个事务的过程依然符合两阶段提交,只不过多了一个 dump_thread 线程将 binlog 定时同步给从库 B 从库 B 通过 io_thread 与主库维持一个长连接接收从主库发过来的 binlog, 然后有多个 sql_thread 线程同步 binlog 里面的内容到数据库当中  binlog 的存储格式 statement row
         </div>
@@ -477,7 +477,7 @@
           <div class="post-meta">
             <i class="iconfont icon-tags"></i>
             
-              <a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/">#数据库</a>
+              <a href="/tags/mysql/">#mysql</a>
             
           </div>
         
@@ -489,7 +489,7 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/06/(%E5%8D%81%E4%BA%8C)mysql%20%E6%97%A5%E5%BF%97%E5%86%99%E5%85%A5%E6%97%B6%E6%9C%BA/" target="_self">
+        <a href="/2022/11/06/mysql/(%E5%8D%81%E4%BA%8C)mysql%20%E6%97%A5%E5%BF%97%E5%86%99%E5%85%A5%E6%97%B6%E6%9C%BA/" target="_self">
           <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(十二)mysql 日志写入时机">
         </a>
       </div>
@@ -497,13 +497,13 @@
     <article class="col-12 col-md-8 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/2022/11/06/(%E5%8D%81%E4%BA%8C)mysql%20%E6%97%A5%E5%BF%97%E5%86%99%E5%85%A5%E6%97%B6%E6%9C%BA/" target="_self">
+        <a href="/2022/11/06/mysql/(%E5%8D%81%E4%BA%8C)mysql%20%E6%97%A5%E5%BF%97%E5%86%99%E5%85%A5%E6%97%B6%E6%9C%BA/" target="_self">
           (十二)mysql 日志写入时机
         </a>
       </h1>
 
       
-      <a class="index-excerpt " href="/2022/11/06/(%E5%8D%81%E4%BA%8C)mysql%20%E6%97%A5%E5%BF%97%E5%86%99%E5%85%A5%E6%97%B6%E6%9C%BA/" target="_self">
+      <a class="index-excerpt " href="/2022/11/06/mysql/(%E5%8D%81%E4%BA%8C)mysql%20%E6%97%A5%E5%BF%97%E5%86%99%E5%85%A5%E6%97%B6%E6%9C%BA/" target="_self">
         <div>
           binlogmysql 操作日志的步骤当中,几乎都有为日志文件添加对应的缓存,由此可见 mysql 最大程度上在利用缓存来平衡内存和磁盘间写入速率的差距 同样的 binlog 也有自己的 binlog buffer, mysql 为每个事务都分配了对应的 binlog buffer 当事务执行时,都是先写入 binlog buffer, 当事务提交的时候才把 binlog buffer 写入 bi
         </div>
@@ -544,7 +544,7 @@
           <div class="post-meta">
             <i class="iconfont icon-tags"></i>
             
-              <a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/">#数据库</a>
+              <a href="/tags/mysql/">#mysql</a>
             
           </div>
         
@@ -556,7 +556,7 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/06/(%E5%8D%81%E4%B8%80)mysql%20%E5%B9%BB%E8%AF%BB%E5%92%8C%20next-key%20lock/" target="_self">
+        <a href="/2022/11/06/mysql/(%E5%8D%81%E4%B8%80)mysql%20%E5%B9%BB%E8%AF%BB%E5%92%8C%20next-key%20lock/" target="_self">
           <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(十一)mysql 幻读和 next-key lock">
         </a>
       </div>
@@ -564,13 +564,13 @@
     <article class="col-12 col-md-8 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/2022/11/06/(%E5%8D%81%E4%B8%80)mysql%20%E5%B9%BB%E8%AF%BB%E5%92%8C%20next-key%20lock/" target="_self">
+        <a href="/2022/11/06/mysql/(%E5%8D%81%E4%B8%80)mysql%20%E5%B9%BB%E8%AF%BB%E5%92%8C%20next-key%20lock/" target="_self">
           (十一)mysql 幻读和 next-key lock
         </a>
       </h1>
 
       
-      <a class="index-excerpt " href="/2022/11/06/(%E5%8D%81%E4%B8%80)mysql%20%E5%B9%BB%E8%AF%BB%E5%92%8C%20next-key%20lock/" target="_self">
+      <a class="index-excerpt " href="/2022/11/06/mysql/(%E5%8D%81%E4%B8%80)mysql%20%E5%B9%BB%E8%AF%BB%E5%92%8C%20next-key%20lock/" target="_self">
         <div>
           什么是幻读幻读的定义: 事务在执行过程前后两次查询同一个范围内的数据时,后一次读到了前一次没有读到的结果 在可重复度级别下,普通的查询时 快照读 是不会观测到其他事务在其中插入的数据的,因此 幻读 仅发生在 当前读 的操作下 幻读带了什么问题假设有如下三个会话,并且没有针对幻读采取任何措施 且表里面只有 2 条记录 id = 5, d = 5, id = 0, d = 0, 执行顺序如下  从语义
         </div>
@@ -611,7 +611,7 @@
           <div class="post-meta">
             <i class="iconfont icon-tags"></i>
             
-              <a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/">#数据库</a>
+              <a href="/tags/mysql/">#mysql</a>
             
           </div>
         
@@ -623,7 +623,7 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/05/(%E5%8D%81)mysql%20%E7%B4%A2%E5%BC%95%E5%A4%B1%E6%95%88%E7%9A%84%E5%9C%BA%E6%99%AF/" target="_self">
+        <a href="/2022/11/05/mysql/(%E5%8D%81)mysql%20%E7%B4%A2%E5%BC%95%E5%A4%B1%E6%95%88%E7%9A%84%E5%9C%BA%E6%99%AF/" target="_self">
           <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(十)mysql 索引失效的场景">
         </a>
       </div>
@@ -631,13 +631,13 @@
     <article class="col-12 col-md-8 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/2022/11/05/(%E5%8D%81)mysql%20%E7%B4%A2%E5%BC%95%E5%A4%B1%E6%95%88%E7%9A%84%E5%9C%BA%E6%99%AF/" target="_self">
+        <a href="/2022/11/05/mysql/(%E5%8D%81)mysql%20%E7%B4%A2%E5%BC%95%E5%A4%B1%E6%95%88%E7%9A%84%E5%9C%BA%E6%99%AF/" target="_self">
           (十)mysql 索引失效的场景
         </a>
       </h1>
 
       
-      <a class="index-excerpt " href="/2022/11/05/(%E5%8D%81)mysql%20%E7%B4%A2%E5%BC%95%E5%A4%B1%E6%95%88%E7%9A%84%E5%9C%BA%E6%99%AF/" target="_self">
+      <a class="index-excerpt " href="/2022/11/05/mysql/(%E5%8D%81)mysql%20%E7%B4%A2%E5%BC%95%E5%A4%B1%E6%95%88%E7%9A%84%E5%9C%BA%E6%99%AF/" target="_self">
         <div>
           mysql 当中索引失效的场景索引字段使用函数思考下 mysql 为何能够通过索引快速定位数据,是因为 B+ 同层节点的有序性 如果说某些操作打破了这种有序性,那么就无法利用索引树来检索数据了,只能走全表扫描 例如 select a from t where sum(a) &gt; 5 这种对索引列做函数操作的,很有可能破坏索引的有序性 其实并不是说 mysql 对于这种函数操作完全放弃了索引,即
         </div>
@@ -678,7 +678,7 @@
           <div class="post-meta">
             <i class="iconfont icon-tags"></i>
             
-              <a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/">#数据库</a>
+              <a href="/tags/mysql/">#mysql</a>
             
           </div>
         
@@ -690,7 +690,7 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/05/(%E4%B9%9D)mysql%20order%20by%20%E5%8E%9F%E7%90%86%E7%BB%86%E8%8A%82/" target="_self">
+        <a href="/2022/11/05/mysql/(%E4%B9%9D)mysql%20order%20by%20%E5%8E%9F%E7%90%86%E7%BB%86%E8%8A%82/" target="_self">
           <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(九)mysql order by 原理细节">
         </a>
       </div>
@@ -698,13 +698,13 @@
     <article class="col-12 col-md-8 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/2022/11/05/(%E4%B9%9D)mysql%20order%20by%20%E5%8E%9F%E7%90%86%E7%BB%86%E8%8A%82/" target="_self">
+        <a href="/2022/11/05/mysql/(%E4%B9%9D)mysql%20order%20by%20%E5%8E%9F%E7%90%86%E7%BB%86%E8%8A%82/" target="_self">
           (九)mysql order by 原理细节
         </a>
       </h1>
 
       
-      <a class="index-excerpt " href="/2022/11/05/(%E4%B9%9D)mysql%20order%20by%20%E5%8E%9F%E7%90%86%E7%BB%86%E8%8A%82/" target="_self">
+      <a class="index-excerpt " href="/2022/11/05/mysql/(%E4%B9%9D)mysql%20order%20by%20%E5%8E%9F%E7%90%86%E7%BB%86%E8%8A%82/" target="_self">
         <div>
           order by假设有一张城市表,记录了城市里面每个人的名字,你年龄的信息 现在需要对城市是 杭州 的所有人,按照年龄排序后返回前 1000 人 1select city,name,age from t where city=&#x27;杭州&#x27; order by name limit 999;  全字段排序为了避免扫描全表,很自然的在 where 语句查询的字段 city 上加上索引
         </div>
@@ -745,7 +745,7 @@
           <div class="post-meta">
             <i class="iconfont icon-tags"></i>
             
-              <a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/">#数据库</a>
+              <a href="/tags/mysql/">#mysql</a>
             
           </div>
         
@@ -757,7 +757,7 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/05/(%E5%85%AB)mysql%20count%20%E5%87%BD%E6%95%B0%E6%9C%BA%E5%88%B6/" target="_self">
+        <a href="/2022/11/05/mysql/(%E5%85%AB)mysql%20count%20%E5%87%BD%E6%95%B0%E6%9C%BA%E5%88%B6/" target="_self">
           <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(八)mysql count 函数机制">
         </a>
       </div>
@@ -765,13 +765,13 @@
     <article class="col-12 col-md-8 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/2022/11/05/(%E5%85%AB)mysql%20count%20%E5%87%BD%E6%95%B0%E6%9C%BA%E5%88%B6/" target="_self">
+        <a href="/2022/11/05/mysql/(%E5%85%AB)mysql%20count%20%E5%87%BD%E6%95%B0%E6%9C%BA%E5%88%B6/" target="_self">
           (八)mysql count 函数机制
         </a>
       </h1>
 
       
-      <a class="index-excerpt " href="/2022/11/05/(%E5%85%AB)mysql%20count%20%E5%87%BD%E6%95%B0%E6%9C%BA%E5%88%B6/" target="_self">
+      <a class="index-excerpt " href="/2022/11/05/mysql/(%E5%85%AB)mysql%20count%20%E5%87%BD%E6%95%B0%E6%9C%BA%E5%88%B6/" target="_self">
         <div>
           count(*) 的实现原理 在 Myisam 上,每个表的总行数保存在了磁盘上,因此 count(*) 可以在 O(1) 的时间复杂度之内得到,效率非常高 在 InnoDB 上,不会单独保存表的总行数,因此只能通过遍历所有数据,完成统计得到  为什么 InnoDB 不保存总记录数,因为 MVCC 多版本并发控制导致,即使每次执行 count(*) 语句时,快照读返回的行数都不一定是准确的 例如事
         </div>
@@ -812,7 +812,7 @@
           <div class="post-meta">
             <i class="iconfont icon-tags"></i>
             
-              <a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/">#数据库</a>
+              <a href="/tags/mysql/">#mysql</a>
             
           </div>
         
@@ -824,7 +824,7 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/05/(%E4%B8%83)mysql%20%E8%A1%A8%E7%A9%BA%E9%97%B4%E5%9B%9E%E6%94%B6/" target="_self">
+        <a href="/2022/11/05/mysql/(%E4%B8%83)mysql%20%E8%A1%A8%E7%A9%BA%E9%97%B4%E5%9B%9E%E6%94%B6/" target="_self">
           <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(七)mysql 表空间回收">
         </a>
       </div>
@@ -832,13 +832,13 @@
     <article class="col-12 col-md-8 mx-auto index-info">
       <h1 class="index-header">
         
-        <a href="/2022/11/05/(%E4%B8%83)mysql%20%E8%A1%A8%E7%A9%BA%E9%97%B4%E5%9B%9E%E6%94%B6/" target="_self">
+        <a href="/2022/11/05/mysql/(%E4%B8%83)mysql%20%E8%A1%A8%E7%A9%BA%E9%97%B4%E5%9B%9E%E6%94%B6/" target="_self">
           (七)mysql 表空间回收
         </a>
       </h1>
 
       
-      <a class="index-excerpt " href="/2022/11/05/(%E4%B8%83)mysql%20%E8%A1%A8%E7%A9%BA%E9%97%B4%E5%9B%9E%E6%94%B6/" target="_self">
+      <a class="index-excerpt " href="/2022/11/05/mysql/(%E4%B8%83)mysql%20%E8%A1%A8%E7%A9%BA%E9%97%B4%E5%9B%9E%E6%94%B6/" target="_self">
         <div>
           表空间的存储设置首先有个设置 innodb_file_per_table 表示是否把表数据存储为单个文件,否则的话就放在共享表空间里 明确一点,单独存放为一个文件更好,因为这样更便于管理; 而且 drop 命令执行时会删除对应的表文件,如果放在共享空间里, drop 命令不会回收表空间 delete 语句为何不会回收表空间可以结合前面讲的索引复习, 都知道 mysql 的索引是用 B+ 树实现的,
         </div>
@@ -879,7 +879,7 @@
           <div class="post-meta">
             <i class="iconfont icon-tags"></i>
             
-              <a href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/">#数据库</a>
+              <a href="/tags/mysql/">#mysql</a>
             
           </div>
         
