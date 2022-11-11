@@ -1,0 +1,708 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-default-color-scheme=dark>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/logo-Linkin-Park.png">
+  <link rel="icon" href="/img/logo-Linkin-Park.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="n!Ck">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="redis 如何保证高可用对于 redis 来说高可用有两层含义  异常宕机时数据尽量不丢失 服务尽量少中断  对于第 1 点来说,redis 通过 AOF 和 RDB 两种不同的持久化方式来保证数据尽量不丢失 对于第 2 点来说,如果一个节点挂掉了,想要中断服务的时间尽可能短,最简单的办法就是部署多台实例; 这样某个节点挂掉之后还能有其他节点继续对外提供服务 对于第 2 点,如何保证每个节点之间">
+<meta property="og:type" content="article">
+<meta property="og:title" content="(四)redis 主从同步">
+<meta property="og:url" content="https://n1ck.cyou/2022/11/11/(%E5%9B%9B)redis%20%E4%B8%BB%E4%BB%8E%E5%90%8C%E6%AD%A5/index.html">
+<meta property="og:site_name" content="n!Ck playground">
+<meta property="og:description" content="redis 如何保证高可用对于 redis 来说高可用有两层含义  异常宕机时数据尽量不丢失 服务尽量少中断  对于第 1 点来说,redis 通过 AOF 和 RDB 两种不同的持久化方式来保证数据尽量不丢失 对于第 2 点来说,如果一个节点挂掉了,想要中断服务的时间尽可能短,最简单的办法就是部署多台实例; 这样某个节点挂掉之后还能有其他节点继续对外提供服务 对于第 2 点,如何保证每个节点之间">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://n1ck.cyou/img/redis.png">
+<meta property="article:published_time" content="2022-11-11T00:04:07.000Z">
+<meta property="article:modified_time" content="2022-11-11T01:11:08.787Z">
+<meta property="article:author" content="n!Ck">
+<meta property="article:tag" content="redis">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://n1ck.cyou/img/redis.png">
+  
+  
+  
+  <title>(四)redis 主从同步 - n!Ck playground</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"n1ck.cyou","root":"/","version":"1.9.3","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 60vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>n!Ck playground</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                Home
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                Archives
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                Categories
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                Tags
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                About
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/page.jpeg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="(四)redis 主从同步"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-11-11 08:04" pubdate>
+          November 11, 2022 am
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          2.8k words
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          24 mins
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">(四)redis 主从同步</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h3 id="redis-如何保证高可用"><a href="#redis-如何保证高可用" class="headerlink" title="redis 如何保证高可用"></a>redis 如何保证高可用</h3><p>对于 redis 来说高可用有两层含义</p>
+<ol>
+<li>异常宕机时数据尽量不丢失</li>
+<li>服务尽量少中断</li>
+</ol>
+<p>对于第 1 点来说,redis 通过 <code>AOF</code> 和 <code>RDB</code> 两种不同的持久化方式来保证数据尽量不丢失</p>
+<p>对于第 2 点来说,如果一个节点挂掉了,想要中断服务的时间尽可能短,最简单的办法就是部署多台实例; 这样某个节点挂掉之后还能有其他节点继续对外提供服务</p>
+<p>对于第 2 点,如何保证每个节点之间的数据一致性,又成了难题</p>
+<h4 id="redis-的读写分离"><a href="#redis-的读写分离" class="headerlink" title="redis 的读写分离"></a>redis 的读写分离</h4><p>如果所有节点之间平行对外提供服务,即每个节点都能处理读和写请求; 对于读请求来说是幂等的,所有节点都可以提供读服务,这个不需要额外考虑</p>
+<p>对于写请求来说,如果客户端 3 个写请求分别被发到了 3 个不同的节点上,对于客户端来说,后续的查询无论命中了哪个节点,都是脏数据</p>
+<p>redis 采用读写分离避免上述情况发生: 读请求从库和主库都能处理响应; 写请求只有主库能够处理,在主库处理完成后同步给其他从库保证数据的 <strong>最终一致性</strong></p>
+<p>可以看到,redis 的读写分离只能保证 <strong>最终一致性</strong>, 不是 <strong>强一致性</strong></p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h80wk46gmkj30im067gmt.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
+<h3 id="redis-主从同步"><a href="#redis-主从同步" class="headerlink" title="redis 主从同步"></a>redis 主从同步</h3><p>启动 redis 实例时,可以通过 <code>replaceof</code> 或者 <code>slaveof 5.0 之前</code> 指令形成主从关系,之后会按照 3 个过程进行第一次主从同步</p>
+<ol>
+<li>主从之间建立连接,准备开始同步</li>
+<li>主库将数据发送给从库</li>
+<li>主库将第 2 步期间新进来的写请求发送个从库</li>
+</ol>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h80wka46xej30j208fq59.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
+<h4 id="建立连接阶段"><a href="#建立连接阶段" class="headerlink" title="建立连接阶段"></a>建立连接阶段</h4><p>从库向主库发送指令 <code>psync</code> 表示即将进行主从同步,参数包含 <code>主库的实例 id</code> 和 <code>同步进度偏移量</code><br><code>?</code> 由于第一次进行主从同步,此时从库并不知道主库的实例 id; <code>-1</code> 表示第一次进行全量同步</p>
+<p>当主库接收到从库的 <code>psync</code> 指令后,会通过 <code>fullsync</code> 指令响应给从库,并且在响应里面带上自己的 <code>主库实例 id</code> 和 <code>当前的复制进度</code></p>
+<h4 id="全量同步阶段"><a href="#全量同步阶段" class="headerlink" title="全量同步阶段"></a>全量同步阶段</h4><p>在完成握手建立连接之后,主库会把当前的所有数据全部发送给从库; 从库接收到数据后在本地完成数据加载; 这个阶段使用 <code>RDB</code> 方式进行数据导入</p>
+<ol>
+<li>主库开始全量同步,执行 <code>bgsave</code> 命令 <code>fork</code> 一个子线程开始生成全量 <code>RDB</code> 文件</li>
+<li>接着将这个全量 <code>RDB</code> 文件发送给从库</li>
+<li>从库接收到主库的全量 <code>RDB</code> 文件之后,直接清空本地的数据; 使用主库的全量 <code>RDB</code> 文件导入到本地的数据库; 避免留下之前的脏数据</li>
+</ol>
+<p>根据 <code>RDB</code> 快照的生成过程,在主从同步时,主库的主线程仍然能够处理请求,自然也会接收到新的写请求</p>
+<p>为了保证这些写请求在从库上不会丢失; 主库会把 <code>RDB</code> 期间的写请求全部写入 <code>RDB</code> 缓冲区,即 <code>replication buffer</code></p>
+<p>当主库将全量 <code>RDB</code> 文件发送完成之后,再把这个增量 <code>RDB</code> 文件继续发送个从库; 从库将这两个 <code>RDB</code> 文件的数据应用到本地的数据库之后,就完成了一次全量同步</p>
+<h4 id="级联部署"><a href="#级联部署" class="headerlink" title="级联部署"></a>级联部署</h4><p>可以看到在全量同步的过程当中,有两个明显的性能问题</p>
+<ol>
+<li>主库生成全量的 <code>RDB</code> 文件</li>
+<li>主库将全量的 <code>RDB</code> 文件通过网络发送给从库</li>
+</ol>
+<p>根据之前说的,生成 <code>RDB</code> 快照时,即使是通过 <code>fork</code> 子线程的方式避免阻塞主线程; 但是如果全量数据过大的话,<code>fork</code> 操作本身也会阻塞主线程</p>
+<p>而且发送过大的全量 <code>RDB</code> 文件,也会消耗大量的网络资源,导致正常的读写请求无法进入主库</p>
+<p>为了解决全量同步过程当中主库压力过大的问题,redis 引入了 <code>级联部署</code> 的方式,即 <code>主-从-从</code> 模式</p>
+<p>在之前的主从结构当中,所有的从库都是直接和主库相连,这样对于同一份 <code>RDB</code> 快照来说,就要发给所有的从节点</p>
+<p>在级联部署当中,可以手动选择一个从库用于级联部分其他的从库,再让这个从库老大成为主库的从库</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h80wkfiie9j30j809o766.jpg" srcset="/img/loading.gif" lazyload alt="img_2.png"></p>
+<p>这样,就将原来的 <code>1 主 4 从</code> 变成了 <code>1 主 2 从</code>; 主库在做全量同步的时候,只需要发送 2 份 <code>RDB</code> 快照文件即可,网络压力直接减少到原来的一半</p>
+<h4 id="网络断连或者阻塞导致的主从同步失败"><a href="#网络断连或者阻塞导致的主从同步失败" class="headerlink" title="网络断连或者阻塞导致的主从同步失败"></a>网络断连或者阻塞导致的主从同步失败</h4><p>一旦主库和从库之间完成了首次全量同步,主库就会通过之前已经握手建立好的连接,持续地向从库发送新的写请求; 这个过程称为 <code>基于长连接的命令传播</code></p>
+<p>但是考虑到如果网络在这个过程当中出现了问题,如断连或者网络带宽本身就阻塞了; 主从同步就无法继续通过长连接传播命令; 这样也无法保证整个集群的数据一致性了</p>
+<ol>
+<li>对于老版本的 redis (2.8 以前) 网络断连之后,下一次连接恢复时,会进行一次全量同步; 如果网络本身质量不好频繁断连,每次的全量同步会造成非常大的性能问题</li>
+<li>redis 2.8 以后引入了 <code>增量同步</code> 技术; 即网络重连之后,不进行全量同步,而是会把主库在断连期间接收到写请求发送给从库</li>
+</ol>
+<p>增量同步技术实现的关键点,就是之前介绍的全量同步过程中的第三个阶段,有个 <code>replication backlog</code> 缓冲区</p>
+<p>当全量同步在生成全量 <code>RDB</code> 和发送全量 <code>RDB</code> 的过程中,会把主库新接收到的写请求记录在这个 <code>replication buffer</code> 当中,当全量 <code>RDB</code> 文件发送完毕后,再把这些增量数据全部发送给从库</p>
+<p>看一看这个 <code>replication backlog (复制积压缓冲区)</code> 的具体构成:</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h80wkksknij30j204zwgb.jpg" srcset="/img/loading.gif" lazyload alt="img_3.png"></p>
+<p>与 mysql 的 <code>redo log</code> 非常类似,<code>replication backlog</code> 也是一个环形缓冲区</p>
+<p>有两个指针,记录主库写入的位置 <code>write_pos</code> 和从库读的位置 <code>read_pos</code>,这两个指针中间的差值就成为主从同步的偏移量 <code>offset</code> </p>
+<p>需要区分下: <code>replication buffer</code> 和 <code>replication backlog</code></p>
+<ol>
+<li><code>buffer</code> 在每个从库上都有一份,用于接收增量同步进行时的数据</li>
+<li><code>backlog</code> 只在主库上有一份记录,所有的从库共用这一份 <code>backlog</code> 缓冲</li>
+</ol>
+<p>回顾一下第一次全量同步的第 1 步,从库向主库发送 <code>psync ? -1</code> 指令,其中 <code>offset=-1</code> 表示进行一次全量同步</p>
+<p>对于第一次全量同步,主库的写入点和从库的读取点是一致的,随着服务的持续运转,持续进行增量主从同步,主库的写入点和从库的读取点都会向后移动,正常来说,这两个指针的偏移量基本相等</p>
+<p>如果在某个时刻网络发生了断连,导致主从同步中断,在网络恢复之后; 从库会向主库发送 <code>psync 主库id offset</code> 的指令,将自己的读取点告诉给主库</p>
+<p>此时主库会判断当前从库的读取点和自己的写入点之间的差距,此时主库会把这中间差距的写入请求重新发送给从库; 由此继续进行增量的同步</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h80wkp7ytwj30j709omz8.jpg" srcset="/img/loading.gif" lazyload alt="img_4.png"></p>
+<h4 id="replication-backlog-覆盖写的问题"><a href="#replication-backlog-覆盖写的问题" class="headerlink" title="replication backlog 覆盖写的问题"></a>replication backlog 覆盖写的问题</h4><p>由于 <code>replication backlog</code> 是一个环形的缓冲区,如果网络断连或者主从延迟时间过长,会导致主库的写入点位置超过了从库的读入点,覆盖了部分还没有同步到从库的数据; 导致数据的不一致问题</p>
+<p>实际上在配置 <code>复制积压缓冲区</code> 的大小时,需要考虑到主库写入速度和网络传输速度; 而且为了应对一些突发状况,实际场景下还要把这个大小扩大一倍</p>
+<p>例如当前主库每秒写入 <code>2000</code> 条记录,每条记录大小为 <code>2KB</code>, 网络每秒能够传输 <code>1000</code> 条记录</p>
+<p>此时 <code>replication buffer</code> 缓冲需要保存 <code>1000</code> 条记录,大小至少需要 <code>2MB</code>,实际上 <code>replication backlog</code> 的大小就需要设置为 <code>buffer</code> 的两倍以上,避免覆盖写</p>
+<p>但是如果主库压力特别快,写入速度远超于从库同步的进度,再大的 <code>backlog</code> 也都将被主库写满; 所以一味地增加 <code>backlog</code> 的大小,属于治标不治本的方案</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/redis/" class="category-chain-item">redis</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/redis/">#redis</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>(四)redis 主从同步</div>
+      <div>https://n1ck.cyou/2022/11/11/(四)redis 主从同步/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>Author</div>
+          <div>n!Ck</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>Posted on</div>
+          <div>November 11, 2022</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>Licensed under</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - Attribution">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/11/10/(%E4%B8%89)redis%20%E6%8C%81%E4%B9%85%E5%8C%96%E6%9C%BA%E5%88%B6/" title="(三)redis 持久化机制">
+                        <span class="hidden-mobile">(三)redis 持久化机制</span>
+                        <span class="visible-mobile">Next</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;Table of Contents</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Search</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">Keyword</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">Blog works best with JavaScript enabled</div>
+  </noscript>
+</body>
+</html>
