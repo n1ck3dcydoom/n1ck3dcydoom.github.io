@@ -221,6 +221,73 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2022/11/11/(%E5%9B%9B)redis%20%E5%93%A8%E5%85%B5%E6%A8%A1%E5%BC%8F/" target="_self">
+          <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(四)redis 哨兵模式">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2022/11/11/(%E5%9B%9B)redis%20%E5%93%A8%E5%85%B5%E6%A8%A1%E5%BC%8F/" target="_self">
+          (四)redis 哨兵模式
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt " href="/2022/11/11/(%E5%9B%9B)redis%20%E5%93%A8%E5%85%B5%E6%A8%A1%E5%BC%8F/" target="_self">
+        <div>
+          读写分离场景下主库宕机怎么办读写分离场景下,只有主库才能提供写服务; 如果主库发生故障宕机,此时所有的写请求将不可用,而且从库的主从同步也会断开导致读请求可能产生数据不一致问题  此时需要将一个从库提升为新的主库来提供写服务,其他从库继续从这个新的主库上进行主从同步; 这个过程涉及到 3 个问题  主库是否真的挂了 选哪个从库作为主库 怎么把新主库的信息告知给其他从库和客户端  redis 提供了
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-11-11 09:12" pubdate>
+              2022-11-11
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/redis/" class="category-chain-item">redis</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/redis/">#redis</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+      <div class="col-12 col-md-4 m-auto index-img">
         <a href="/2022/11/11/(%E5%9B%9B)redis%20%E4%B8%BB%E4%BB%8E%E5%90%8C%E6%AD%A5/" target="_self">
           <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(四)redis 主从同步">
         </a>
@@ -782,73 +849,6 @@
           <div class="post-meta mr-3">
             <i class="iconfont icon-date"></i>
             <time datetime="2022-11-06 16:41" pubdate>
-              2022-11-06
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3 d-flex align-items-center">
-            <i class="iconfont icon-category"></i>
-            
-
-<span class="category-chains">
-  
-  
-    
-      <span class="category-chain">
-        
-  <a href="/categories/mysql/" class="category-chain-item">mysql</a>
-  
-  
-
-      </span>
-    
-  
-</span>
-
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/mysql/">#mysql</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-      <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/06/mysql/(%E5%8D%81%E4%B8%80)mysql%20%E5%B9%BB%E8%AF%BB%E5%92%8C%20next-key%20lock/" target="_self">
-          <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(十一)mysql 幻读和 next-key lock">
-        </a>
-      </div>
-    
-    <article class="col-12 col-md-8 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2022/11/06/mysql/(%E5%8D%81%E4%B8%80)mysql%20%E5%B9%BB%E8%AF%BB%E5%92%8C%20next-key%20lock/" target="_self">
-          (十一)mysql 幻读和 next-key lock
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt " href="/2022/11/06/mysql/(%E5%8D%81%E4%B8%80)mysql%20%E5%B9%BB%E8%AF%BB%E5%92%8C%20next-key%20lock/" target="_self">
-        <div>
-          什么是幻读幻读的定义: 事务在执行过程前后两次查询同一个范围内的数据时,后一次读到了前一次没有读到的结果 在可重复度级别下,普通的查询时 快照读 是不会观测到其他事务在其中插入的数据的,因此 幻读 仅发生在 当前读 的操作下 幻读带了什么问题假设有如下三个会话,并且没有针对幻读采取任何措施 且表里面只有 2 条记录 id = 5, d = 5, id = 0, d = 0, 执行顺序如下  从语义
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2022-11-06 14:11" pubdate>
               2022-11-06
             </time>
           </div>

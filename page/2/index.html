@@ -221,6 +221,73 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2022/11/06/mysql/(%E5%8D%81%E4%B8%80)mysql%20%E5%B9%BB%E8%AF%BB%E5%92%8C%20next-key%20lock/" target="_self">
+          <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(十一)mysql 幻读和 next-key lock">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2022/11/06/mysql/(%E5%8D%81%E4%B8%80)mysql%20%E5%B9%BB%E8%AF%BB%E5%92%8C%20next-key%20lock/" target="_self">
+          (十一)mysql 幻读和 next-key lock
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt " href="/2022/11/06/mysql/(%E5%8D%81%E4%B8%80)mysql%20%E5%B9%BB%E8%AF%BB%E5%92%8C%20next-key%20lock/" target="_self">
+        <div>
+          什么是幻读幻读的定义: 事务在执行过程前后两次查询同一个范围内的数据时,后一次读到了前一次没有读到的结果 在可重复度级别下,普通的查询时 快照读 是不会观测到其他事务在其中插入的数据的,因此 幻读 仅发生在 当前读 的操作下 幻读带了什么问题假设有如下三个会话,并且没有针对幻读采取任何措施 且表里面只有 2 条记录 id = 5, d = 5, id = 0, d = 0, 执行顺序如下  从语义
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-11-06 14:11" pubdate>
+              2022-11-06
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/mysql/" class="category-chain-item">mysql</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/mysql/">#mysql</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+      <div class="col-12 col-md-4 m-auto index-img">
         <a href="/2022/11/05/mysql/(%E5%8D%81)mysql%20%E7%B4%A2%E5%BC%95%E5%A4%B1%E6%95%88%E7%9A%84%E5%9C%BA%E6%99%AF/" target="_self">
           <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(十)mysql 索引失效的场景">
         </a>
@@ -783,73 +850,6 @@
             <i class="iconfont icon-date"></i>
             <time datetime="2022-11-03 09:21" pubdate>
               2022-11-03
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3 d-flex align-items-center">
-            <i class="iconfont icon-category"></i>
-            
-
-<span class="category-chains">
-  
-  
-    
-      <span class="category-chain">
-        
-  <a href="/categories/mysql/" class="category-chain-item">mysql</a>
-  
-  
-
-      </span>
-    
-  
-</span>
-
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/mysql/">#mysql</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-      <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/02/mysql/(%E4%B8%80)mysql%20%E6%97%A5%E5%BF%97%E7%B3%BB%E7%BB%9F/" target="_self">
-          <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(一)mysql 日志系统">
-        </a>
-      </div>
-    
-    <article class="col-12 col-md-8 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2022/11/02/mysql/(%E4%B8%80)mysql%20%E6%97%A5%E5%BF%97%E7%B3%BB%E7%BB%9F/" target="_self">
-          (一)mysql 日志系统
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt " href="/2022/11/02/mysql/(%E4%B8%80)mysql%20%E6%97%A5%E5%BF%97%E7%B3%BB%E7%BB%9F/" target="_self">
-        <div>
-          日志模块 redo log 和 binlogredo log首先明确一点: mysql 是 先写日志,再写磁盘  这个和 redis 的 先写磁盘,再写日志 正好相反 mysql 写 前日志 ,redis 写 后日志 在存储引擎内,任何更新操作都会先记录 redo log 后,并更新内存数据,然后再适当的时候将 redo log 的数据回写到磁盘里 由此可知 redo log 是存储引擎持有的 r
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2022-11-02 22:25" pubdate>
-              2022-11-02
             </time>
           </div>
         
