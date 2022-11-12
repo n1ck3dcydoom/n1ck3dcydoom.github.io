@@ -25,7 +25,7 @@
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="https://n1ck.cyou/img/redis.png">
 <meta property="article:published_time" content="2022-11-12T04:25:07.000Z">
-<meta property="article:modified_time" content="2022-11-12T08:55:39.538Z">
+<meta property="article:modified_time" content="2022-11-12T09:21:54.480Z">
 <meta property="article:author" content="n!Ck">
 <meta property="article:tag" content="redis">
 <meta name="twitter:card" content="summary_large_image">
@@ -221,7 +221,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          3.9k words
+          4.9k words
         
       </span>
     
@@ -232,7 +232,7 @@
         
         
         
-          33 mins
+          42 mins
         
       </span>
     
@@ -364,6 +364,37 @@
 <p>如果说需要访问的数据不在内存页上,就需要一次性从磁盘里面读出 <code>2MB</code> 的内存页,即使只读取或者修改其中几 kb 的数据</p>
 <p>对于写 <code>AOF</code> 日志也是一样,原来一次刷盘只用刷入 <code>8KB</code> 或者 <code>16KB</code> 大小,而现在需要一次性刷入 <code>2MB</code> 的页,即使只写了一点点可能几 kb 的日志量,也需要 <code>2MB</code> 的磁盘资源</p>
 <p>解决办法就是关闭内存大页机制</p>
+<h4 id="内存碎片问题"><a href="#内存碎片问题" class="headerlink" title="内存碎片问题"></a>内存碎片问题</h4><p>redis 在申请内存的时候,有很多种内存分配方式可以选择,例如 <code>libc, jemalloc, tcmalloc</code> ,而 redis 默认使用的是 <code>jemalloc</code> </p>
+<p><code>jemalloc</code> 的分配策略之一就是每次分配超过实际需要的最小 2 的幂次大小,即每次分配都是 <code>8B, 16B, 32B</code> 等等</p>
+<p>redis 选用这样的内存分配方式,其目的就是为了减少内存的分配次数</p>
+<p>例如 redis 申请 20 个字节的空间, <code>jemalloc</code> 就会为其分配 32 个字节的内存; 这样当 redis 如果对这个数据进行扩容时,如果 32 字节仍然可以满足长度的话,就不会触发新的内存分配了</p>
+<p>造成内存碎片的原因</p>
+<ol>
+<li>内存分配器的策略问题: 可以看到对于 <code>jemalloc</code> 来说它本身的分配策略决定了在内存分配时必然会产生内存碎片,因为它只能按照 2 的幂次分配大小; 这会导致内存使用效率下降</li>
+</ol>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h82gurgdrdj30i4085t9t.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
+<ol start="2">
+<li>键值对的删除和额修改会导致原有分配的空间被回收掉; 或者说键值对的扩展和缩小也会导致新的内存分配; 也会带来内存碎片问题</li>
+</ol>
+<p>redis 可以通过命令 <code>INFO memory</code> 检测当前运行时的内存状态; 对于内存碎片的比例一般在 <code>1 ~ 1.5</code> 比较合适,因为内存碎片问题是无法完全避免的,只能说尽量减少</p>
+<h4 id="redis-如何清理内存碎片"><a href="#redis-如何清理内存碎片" class="headerlink" title="redis 如何清理内存碎片"></a>redis 如何清理内存碎片</h4><p>对于 redis 4.0 之前,有且只有一个办法,那就是重启 redis 实例这样 redis 就会重新分配整个数据的内存空间,此时的内存碎片率是最低的</p>
+<p>但是重启带来的后果也很明显</p>
+<ul>
+<li>没有持久化的数据会永久丢失</li>
+<li>进行持久化恢复的时候,如果 <code>AOF</code> 日志或者 <code>RDB</code> 文件过大,数据恢复的时间将会很长; 如果是单节点部署的话,此时重启实例将会导致 redis 完全不可用</li>
+</ul>
+<p>对于 redis 4.0 以后的版本,官方提供了自动整理内存碎片的能力; 简单来说就是 <code>移位合并</code></p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h82guyrx8uj30iv093jsx.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
+<p>redis 通过移动数据的位置,让他们尽可能的合并到一块连续内存上,减少内存碎片出现的概率</p>
+<p>只不过, <strong>碎片整理是有代价的</strong> ,将数据从原来的位置拷贝到新的位置,这会带来时间开销; 而且碎片整理只能由主线程进行; 所以碎片整理会导致一定程度阻塞主线程,从而导致性能降低</p>
+<p>如果启用了碎片整理功能,又想尽可能减少对主线程的阻塞; 就只能提高自动整理出发的碎片率阈值,以及调低最长碎片整理时间,以免长时间进行碎片整理完全阻塞主线程</p>
+<p>相关参数如下:</p>
+<ul>
+<li>内存碎片字节数达到 <code>设定的 mb</code> 时,开始清理</li>
+<li>内存碎片空间占用率达到 <code>设定的比例</code> 时,开始清理</li>
+<li>CPU 进行碎片整理所占用的时间不得低于 <code>设定的比例</code>, 避免时间果断导致碎片整理的效果不好</li>
+<li>CPU 进行碎片整理所占用的时间不得超过 <code>设定的比例</code>, 避免长时间进行碎片整理而阻塞主线程</li>
+</ul>
 
                 
               </div>
