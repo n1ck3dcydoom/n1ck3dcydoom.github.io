@@ -25,7 +25,7 @@
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="https://n1ck.cyou/img/redis.png">
 <meta property="article:published_time" content="2022-11-12T04:25:07.000Z">
-<meta property="article:modified_time" content="2022-11-12T08:10:19.718Z">
+<meta property="article:modified_time" content="2022-11-12T08:38:24.834Z">
 <meta property="article:author" content="n!Ck">
 <meta property="article:tag" content="redis">
 <meta name="twitter:card" content="summary_large_image">
@@ -221,7 +221,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          2.4k words
+          3k words
         
       </span>
     
@@ -232,7 +232,7 @@
         
         
         
-          20 mins
+          26 mins
         
       </span>
     
@@ -320,6 +320,29 @@
 <h3 id="绑定核心的风险"><a href="#绑定核心的风险" class="headerlink" title="绑定核心的风险"></a>绑定核心的风险</h3><p>需要注意的是, <code>物理核心</code> 里面还会有 <code>逻辑核心</code> ,如果把 redis 实例和 <code>逻辑核心</code> 进行了绑定; 这样 redis 在做持久化是 <code>fork</code> 的子线程很有可能会与主线程进行资源竞争</p>
 <p>所以最好的办法就是把 redis 实例和 <code>物理核心</code> 进行绑定,这样可以共用 <code>物理核心</code> 下面的所有 <code>逻辑核心</code> ,让主线程和子线程分别使用不同的 <code>逻辑核心</code> 处理,减少对 CPU 资源的竞争</p>
 <p>通过 <code>lscpu</code> 指令查看 cpu 核心情况,再通过 <code>taskset -c xxx,xxx,xxx ./redis-server</code> 将 redis 实例和某些逻辑核心进行绑定; 要求这些逻辑核心属于同一个物理核心</p>
+<h3 id="redis-自身的问题导致性能下降"><a href="#redis-自身的问题导致性能下降" class="headerlink" title="redis 自身的问题导致性能下降"></a>redis 自身的问题导致性能下降</h3><ol>
+<li>慢查询一般有两点解决办法</li>
+</ol>
+<ul>
+<li>把有性能问题的查询语句使用其他高效的命令代替; </li>
+<li>对于需要做聚合统计的请求,改为查询请求,在客户端本地进行聚合计算,避免拖慢 redis 的性能</li>
+</ul>
+<ol start="2">
+<li><code>key</code> 的过期清理</li>
+</ol>
+<p>redis 会定期清理一些过期的 <code>key</code> 避免内存被这些 <code>key</code> 浪费</p>
+<p>一般情况是每 <code>100ms</code> 删除一些过期 <code>key</code> ,清理算法有如下两种</p>
+<ul>
+<li>采样 <code>active_expire_cycle_lookups_per_loop</code> 的个数,将其中过期的 <code>key</code> 删掉</li>
+</ul>
+<p>什么意思,如果这个配置项值为 <code>N</code>, 每次随机采样 <code>N</code> 个 <code>key</code> ,并将里面过期的 <code>key</code> 给删除掉; 这样每秒钟大概能删除 <code>10N</code> 个过期的 <code>key</code>, 这个默认值是 <code>20</code></p>
+<ul>
+<li>如果超过 <code>25%</code> 的 <code>key</code> 过期了,就会找出过期的 <code>key</code> 并执行删除操作,直到过期 <code>key</code> 的比例下降至 <code>25%</code> 一下</li>
+</ul>
+<p>对于这种清理算法,在 redis 4.0 以前是由主线程进行的,并且会一直执行删除操作直到满足比例,这个过程将会阻塞所有其他请求; 导致 redis 不可用</p>
+<p>在 redis 4.0 以后引入异步子线程执行这个清理算法,避免对主线程的阻塞</p>
+<p>对于第二点,最有可能引起的操作就是 <strong>使用带有相同参数的 expire 命令设置 key 的过期时间</strong>, 这会导致大量 <code>key</code> 具有相同的过期时间,从而导致这个过期比例突然超过 <code>25%</code> 引起删除操作</p>
+<p>如果业务必不可免的需要给大量 <code>key</code> 设置过期时间,可以在每次的基数上,添加一个小小的随机值; 避免大量 <code>key</code> 在同一时间全部超时而出发清理操作,影响 redis 性能</p>
 
                 
               </div>
