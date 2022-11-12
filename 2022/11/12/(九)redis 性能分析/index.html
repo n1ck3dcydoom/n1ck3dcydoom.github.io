@@ -25,7 +25,7 @@
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="https://n1ck.cyou/img/redis.png">
 <meta property="article:published_time" content="2022-11-12T04:25:07.000Z">
-<meta property="article:modified_time" content="2022-11-12T08:38:24.834Z">
+<meta property="article:modified_time" content="2022-11-12T08:55:39.538Z">
 <meta property="article:author" content="n!Ck">
 <meta property="article:tag" content="redis">
 <meta name="twitter:card" content="summary_large_image">
@@ -221,7 +221,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          3k words
+          3.9k words
         
       </span>
     
@@ -232,7 +232,7 @@
         
         
         
-          26 mins
+          33 mins
         
       </span>
     
@@ -343,6 +343,27 @@
 <p>在 redis 4.0 以后引入异步子线程执行这个清理算法,避免对主线程的阻塞</p>
 <p>对于第二点,最有可能引起的操作就是 <strong>使用带有相同参数的 expire 命令设置 key 的过期时间</strong>, 这会导致大量 <code>key</code> 具有相同的过期时间,从而导致这个过期比例突然超过 <code>25%</code> 引起删除操作</p>
 <p>如果业务必不可免的需要给大量 <code>key</code> 设置过期时间,可以在每次的基数上,添加一个小小的随机值; 避免大量 <code>key</code> 在同一时间全部超时而出发清理操作,影响 redis 性能</p>
+<h3 id="磁盘问题导致性能下降"><a href="#磁盘问题导致性能下降" class="headerlink" title="磁盘问题导致性能下降"></a>磁盘问题导致性能下降</h3><h4 id="AOF-日志持久化操作"><a href="#AOF-日志持久化操作" class="headerlink" title="AOF 日志持久化操作"></a>AOF 日志持久化操作</h4><p>当 redis 选用 <code>AOF</code> 日志作为持久化的手段时,有三种不同的刷盘配置</p>
+<ol>
+<li>实时写: 每次执行完写请求后,都将记录写入 <code>os buffer</code> ,并且同步调用 <code>fsync</code> 进行刷盘</li>
+<li>实时写,延时刷: 每次执行完写请求后,都将记录写入 <code>os buffer</code>, 但是每隔 <code>1s</code> 调用一次 <code>fsync</code> 进行刷盘</li>
+<li>延时写: 每次执行完写请求之后,都将记录写入 <code>os buffer</code>, 但是什么时候调用 <code>fsync</code> 由操作系统决定</li>
+</ol>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h82g3hmanlj30j904376o.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
+<p>对于 <code>实时写</code> 方案,每次都是由主线程调用 <code>fsync</code> 必将阻塞主线程</p>
+<p>对于 <code>实时写,延时刷</code> 方案,是由后台子线程调用 <code>fsync</code> ,不会阻塞主线程</p>
+<p>当进行 <code>AOF</code> 记录的时候,为了减小 <code>AOF</code> 日志文件的大小, 必不可免会有 <code>AOF</code> 重写的操作; 而如果 <code>AOF</code> 日志已经很大了,此时的重写过程也需要很长的时间,当重写过程大量占用磁盘 IO 资源时,调用 <code>fsync</code> 的线程又将被阻塞</p>
+<p>redis 主线程在写入 <code>os buffer</code> 之后,并不是完全不再考虑这个操作了,而是还会监控子线程调用 <code>fsync</code> 的进度</p>
+<p>如果子线程的 <code>fsync</code> 频繁被阻塞,这也会引起主线程的阻塞</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h82g3mlktvj30ja09q40l.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
+<h4 id="操作系统内存-swap"><a href="#操作系统内存-swap" class="headerlink" title="操作系统内存 swap"></a>操作系统内存 swap</h4><p><code>内存 swap</code> 操作是将内存页和磁盘页进行换入和换出的操作,这个过程涉及到磁盘的读写; 一旦触发 <code>内存 swap</code> 无论是换入还是换出的过程,其性能都将收到影响</p>
+<p>而 redis 是内存数据库,一旦 redis 所需要访问的数据不在内存里,就必须从磁盘里面读取,这将增大 redis 的响应时间</p>
+<p>解决办法只有两个: 提高 redis 实例的内存或者使用 redis 集群分摊单节点的内存压力</p>
+<h4 id="内存大页问题"><a href="#内存大页问题" class="headerlink" title="内存大页问题"></a>内存大页问题</h4><p>较新版本的 <code>Linux</code> 内核支持内存大页,也就是支持一个 <code>2MB</code> 的内存页分配,常规的操作系统一个内存页一般只有 <code>8KB</code> 或者 <code>16KB</code></p>
+<p>对于 redis 而言,如果需要访问的数据正好处于一张大页内存里,这还好不会影响性能</p>
+<p>如果说需要访问的数据不在内存页上,就需要一次性从磁盘里面读出 <code>2MB</code> 的内存页,即使只读取或者修改其中几 kb 的数据</p>
+<p>对于写 <code>AOF</code> 日志也是一样,原来一次刷盘只用刷入 <code>8KB</code> 或者 <code>16KB</code> 大小,而现在需要一次性刷入 <code>2MB</code> 的页,即使只写了一点点可能几 kb 的日志量,也需要 <code>2MB</code> 的磁盘资源</p>
+<p>解决办法就是关闭内存大页机制</p>
 
                 
               </div>
