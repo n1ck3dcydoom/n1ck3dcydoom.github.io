@@ -16,16 +16,16 @@
   <meta name="author" content="n!Ck">
   <meta name="keywords" content="">
   
-    <meta name="description" content="redis 的单机部署考虑如下情况,假如有一批数据预估在 25G 左右,此时应当选用什么样配置的 redis 来保存这批数据 通常情况下,redis 的机器内存要超过数据量才够,此时选用一台 32G 的服务器,还能有剩余 7G 来做 redis 持久化,持久化的方式选为 RDB 快照 可实际情况并不令人满意,在 redis 实例正常运行一段时间之后,开始变得缓慢起来,很容易想到是在做 RDB 快照">
+    <meta name="description" content="gossip 协议Gossip 协议保证了在一个连通的有界网络当中,每个节点都与其他节点随机通信,当过一段时间后,整个集群的所有节点状态变为一致性的 redis 使用 Gossip 协议主要包含以下几个命令:  MEET: 已有集群的节点会向新添加的节点发出邀请,使之加入集群内部 PING: 每个节点每秒会随机向其他节点发送心跳包,包含当前节点的哈希槽,ip 地址,端口,当前状态以及最后一次通信的">
 <meta property="og:type" content="article">
-<meta property="og:title" content="(六)redis 切片集群">
-<meta property="og:url" content="https://n1ck.cyou/2022/11/11/(%E5%85%AD)redis%20%E5%88%87%E7%89%87%E9%9B%86%E7%BE%A4/index.html">
+<meta property="og:title" content="(七)redis gossip 协议">
+<meta property="og:url" content="https://n1ck.cyou/2022/11/11/(%E4%B8%83)redis%20gossip%20%E5%8D%8F%E8%AE%AE/index.html">
 <meta property="og:site_name" content="n!Ck playground">
-<meta property="og:description" content="redis 的单机部署考虑如下情况,假如有一批数据预估在 25G 左右,此时应当选用什么样配置的 redis 来保存这批数据 通常情况下,redis 的机器内存要超过数据量才够,此时选用一台 32G 的服务器,还能有剩余 7G 来做 redis 持久化,持久化的方式选为 RDB 快照 可实际情况并不令人满意,在 redis 实例正常运行一段时间之后,开始变得缓慢起来,很容易想到是在做 RDB 快照">
+<meta property="og:description" content="gossip 协议Gossip 协议保证了在一个连通的有界网络当中,每个节点都与其他节点随机通信,当过一段时间后,整个集群的所有节点状态变为一致性的 redis 使用 Gossip 协议主要包含以下几个命令:  MEET: 已有集群的节点会向新添加的节点发出邀请,使之加入集群内部 PING: 每个节点每秒会随机向其他节点发送心跳包,包含当前节点的哈希槽,ip 地址,端口,当前状态以及最后一次通信的">
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="https://n1ck.cyou/img/redis.png">
-<meta property="article:published_time" content="2022-11-11T12:46:21.000Z">
-<meta property="article:modified_time" content="2022-11-11T15:35:23.672Z">
+<meta property="article:published_time" content="2022-11-11T15:34:12.000Z">
+<meta property="article:modified_time" content="2022-11-12T03:10:51.817Z">
 <meta property="article:author" content="n!Ck">
 <meta property="article:tag" content="redis">
 <meta name="twitter:card" content="summary_large_image">
@@ -33,7 +33,7 @@
   
   
   
-  <title>(六)redis 切片集群 - n!Ck playground</title>
+  <title>(七)redis gossip 协议 - n!Ck playground</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -198,7 +198,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="(六)redis 切片集群"></span>
+            <span id="subtitle" data-typed-text="(七)redis gossip 协议"></span>
           
         </div>
 
@@ -209,7 +209,7 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2022-11-11 20:46" pubdate>
+        <time datetime="2022-11-11 23:34" pubdate>
           November 11, 2022 pm
         </time>
       </span>
@@ -270,71 +270,105 @@
         <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
-            <h1 style="display: none">(六)redis 切片集群</h1>
+            <h1 style="display: none">(七)redis gossip 协议</h1>
             
             
               <div class="markdown-body">
                 
-                <h3 id="redis-的单机部署"><a href="#redis-的单机部署" class="headerlink" title="redis 的单机部署"></a>redis 的单机部署</h3><p>考虑如下情况,假如有一批数据预估在 <code>25G</code> 左右,此时应当选用什么样配置的 redis 来保存这批数据</p>
-<p>通常情况下,redis 的机器内存要超过数据量才够,此时选用一台 <code>32G</code> 的服务器,还能有剩余 <code>7G</code> 来做 redis 持久化,持久化的方式选为 <code>RDB</code> 快照</p>
-<p>可实际情况并不令人满意,在 redis 实例正常运行一段时间之后,开始变得缓慢起来,很容易想到是在做 <code>RDB</code> 快照的时候造成了性能问题</p>
-<p>每当需要 <code>RDB</code> 快照的时候,主线程都会 <code>fork</code> 一个子线程去后台专门做快照,然而在 <code>fork</code> 的过程当中,需要复制主线程内的所有内存数据,足足有 <code>25G</code> 之大</p>
-<p>显然此时的 <code>fork</code> 操作阻塞了主线程的正常运行,需要更换 redis 的部署方式</p>
-<h3 id="redis-的切片集群"><a href="#redis-的切片集群" class="headerlink" title="redis 的切片集群"></a>redis 的切片集群</h3><p>相对于上面的单机部署来说,很容易想到集群化,将 <code>25G</code> 的数据平均分为 5 个 <code>5G</code> 大小的切片,将这个 5 个切片分别部署在 5 台 redis 实例上</p>
-<p>这样每个 redis 实例所需要的服务器资源也变少了,而且 <code>RDB</code> 快照时需要复制的内存数据页变小了,<code>fork</code> 操作对主线程的影响几乎没有</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h81m0nccsvj30j409x76v.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
-<h3 id="扩容方式"><a href="#扩容方式" class="headerlink" title="扩容方式"></a>扩容方式</h3><p>一般来说常见的扩容方式分为以下两种</p>
+                <h3 id="gossip-协议"><a href="#gossip-协议" class="headerlink" title="gossip 协议"></a>gossip 协议</h3><p><code>Gossip</code> 协议保证了在一个连通的有界网络当中,每个节点都与其他节点随机通信,当过一段时间后,整个集群的所有节点状态变为一致性的</p>
+<p>redis 使用 <code>Gossip</code> 协议主要包含以下几个命令:</p>
 <ol>
-<li>纵向扩展: 每次增加单机的配置; 例如单机 <code>10G</code> 增加到单机 <code>50G</code> ,或者增加单机内存,或者更换单机更好的 CPU,都属于纵向扩展</li>
-<li>水平扩展: 每次增加一台与之前完全相同配置的 redis 实例来组成一个复杂的 redis 集群</li>
+<li>MEET: 已有集群的节点会向新添加的节点发出邀请,使之加入集群内部</li>
+<li>PING: 每个节点每秒会随机向其他节点发送心跳包,包含当前节点的哈希槽,ip 地址,端口,当前状态以及最后一次通信的时间等信息</li>
+<li>PONG: 当节点收到来自其他节点的 <code>PING</code> 命令后,会向其回复 <code>PONG</code> 消息,消息内容同样包含 <code>PING</code> 消息的内容</li>
+<li>FAIL: 当节点 A <code>PING</code> 不通节点 B 时,节点 A 会向集群内其他节点 <code>广播</code> 这条消息,其他节点在接收到后会将节点 B 标记为下线</li>
 </ol>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h81m0s34nkj30iu09agnh.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
-<h4 id="纵向扩展"><a href="#纵向扩展" class="headerlink" title="纵向扩展"></a>纵向扩展</h4><p>优点</p>
+<p>这样在通过一定时间之后,集群当中每个实例都能接收到其他所有实例维护的哈希槽信息,相当于每个实例都保存了其他所有实例的信息</p>
+<h3 id="gossip-协议故障检测"><a href="#gossip-协议故障检测" class="headerlink" title="gossip 协议故障检测"></a>gossip 协议故障检测</h3><p>每个节点在发送 <code>PING</code> 消息里面都会带上当前节点的状态: <code>正常运行</code>, <code>疑似下线</code>, <code>已下线</code></p>
 <ol>
-<li>扩展时比较方便,实施简单</li>
+<li>当节点 A 得到节点 B 的 <code>PING</code> 消息,里面告知节点 C 进入了 <code>疑似下线</code> 状态; 此时节点 A 会在自己维护的节点列表里面找到节点 C 的结构体,并将节点 B 的疑似下线消息保存到节点 C<br>结构体的 <code>fail_reports</code> 链表里</li>
+<li>并且节点 A 也会想其它节点传播 <code>PING</code> 消息,里面报告了节点 C 进入了 <code>疑似下线</code> 状态</li>
+<li>如果超过半数以上的节点都认为节点 C <code>疑似下线</code>,那么最先将节点 C 标记为 <code>疑似下线</code> 的节点 B 会向其他所有节点 <code>广播</code> <code>FAIL</code> 消息</li>
+<li>收到 <code>FAIL</code> 消息的节点立即更新自己维护的其他节点状态,将节点 C 标记为 <code>已下线</code></li>
 </ol>
-<p>缺点:</p>
-<ol>
-<li>单机内存过大时,一次全量的 <code>RDB</code> 操作在 <code>fork</code> 时会阻塞主线程更长的时间</li>
-<li>从 <code>16G</code> 扩为 <code>32G</code> 很便宜,但是从 <code>512G</code> 扩容到 <code>1T</code> 其成本将会非常高</li>
+<h4 id="gossip-和广播"><a href="#gossip-和广播" class="headerlink" title="gossip 和广播"></a>gossip 和广播</h4><p><code>gossip</code> 依靠的是节点之间的互相随机传播,当有非常紧急的消息需要发送时,就需要通过 <code>广播</code> 的形式通知其他 <code>所有</code> 节点</p>
+<h3 id="集群节点如何通过-gossip-协议通信"><a href="#集群节点如何通过-gossip-协议通信" class="headerlink" title="集群节点如何通过 gossip 协议通信"></a>集群节点如何通过 gossip 协议通信</h3><h4 id="什么时候发送心跳包"><a href="#什么时候发送心跳包" class="headerlink" title="什么时候发送心跳包"></a>什么时候发送心跳包</h4><p>redis 节点会记录向 <strong>每一个</strong> 节点最后一次发送 <code>PING</code> 和收到 <code>PONG</code> 的时间; 然后在节点上有一个定时任务按照一定规则选出一些节点发送 <code>PING</code> 心跳包</p>
+<ul>
+<li>每次定时任务向所有其他未知节点(通常是新加入集群的节点,或者说下线后恢复上线的节点)发送 <code>MEET</code> 或者 <code>PING</code></li>
+<li>每秒从所有已知节点当中选出若干个节点,向其中上一次发送 <code>PING</code> 最旧的节点发送 <code>PING</code></li>
+<li>每次定时任务向收到 <code>PONG</code> 超过 <code>timeout/2</code> 的节点发送 <code>PING</code> 节点</li>
+<li>每次收到 <code>MEET</code> 或者 <code>PING</code> 之后,立即回复 <code>PONG</code></li>
+</ul>
+<h4 id="发送的心跳包内容"><a href="#发送的心跳包内容" class="headerlink" title="发送的心跳包内容"></a>发送的心跳包内容</h4><ol>
+<li>Header:<ul>
+<li>当前节点维护的哈希槽信息</li>
+<li>当前节点的运行状态(正常运行,疑似下线,已下线)</li>
+<li>当前节点的主从状态</li>
+<li>当前节点的 ip 和端口信息</li>
+</ul>
+</li>
+<li>Body<ul>
+<li>发送者已知节点的 <code>ping_sent</code> 和 <code>pong_received</code> 信息</li>
+<li>发送者已知节点的 ip 和端口信息</li>
+<li>发送者已知节点的状态信息(正常运行,疑似下线,已下线)</li>
+</ul>
+</li>
 </ol>
-<h4 id="横向扩展"><a href="#横向扩展" class="headerlink" title="横向扩展"></a>横向扩展</h4><p>为了避免纵向扩展的两个问题,又要保存更多的数据,只能通过增加 redis 实例的数量来实现</p>
-<p>在面对千万级, 亿级数据的时候,集群化部署 redis 是非常合适的选择</p>
-<p>缺点:</p>
-<ol>
-<li>数据切片之后,该如何分配到不同的 redis 实例上</li>
-<li>客户端如何确认自己要查询或者更改的数据在哪个 redis 实例上</li>
+<h4 id="如何处理心跳"><a href="#如何处理心跳" class="headerlink" title="如何处理心跳"></a>如何处理心跳</h4><ol>
+<li>新节点加入时<ul>
+<li>向起他任意一个节点发送 <code>MEET</code></li>
+<li>从 <code>PONG</code> 里面得到对方节点已知的其他节点信息将这些节点加入自己的未知节点列表</li>
+<li>循环上述步骤,直到所有节点都已经已知,完成新节点加入集群</li>
+</ul>
+</li>
 </ol>
-<h3 id="redis-cluster-技术"><a href="#redis-cluster-技术" class="headerlink" title="redis cluster 技术"></a>redis cluster 技术</h3><p>在 redis 3.0 之后,官方提供了 <code>redis cluster</code> 技术来实现切片集群</p>
-<h4 id="redis-cluster-哈希槽分配"><a href="#redis-cluster-哈希槽分配" class="headerlink" title="redis cluster 哈希槽分配"></a>redis cluster 哈希槽分配</h4><p>具体来说,<code>redis cluster</code> 技术采用 <code>hash slot</code> 哈希槽来处理数据和实例之间的映射关系</p>
-<p>在 <code>redis cluster</code> 方案当中,一共提供了 <code>16384</code> 个槽位用于存放数据; 每个保存在 redis 里面的键值对; 都会根据其 <code>key</code> 值被映射到一个唯一的哈希槽里面存放 <code>value</code>;<br>具体的哈希算法是将 <code>key</code> 通过 <code>CRC16</code> 校验后得到一个 <code>16bit</code> 的值,再把这个值和 <code>16384</code> 取模,最后得到的结果就是具体的哈希槽</p>
-<p>在创建 redis 集群的时候,redis 会自动的把 <code>16384</code> 个哈希槽平均分配到每个实例里面; 若有 <code>N</code> 个实例,则每个实例存储的哈希槽个数为 <code>16384/N</code></p>
-<p>当然也可以通过配置,手动决定哪些实例保存哪些哈希槽</p>
-<p>通常来说如果 redis 集群每个实例的配置有所不同,如果 <code>key</code> 都是均匀访问,那么配置低的实例面临的压力会明显大于配置高的实例,此时就需要手动分配哈希槽; 如果每个实例的配置一样,那么 redis 自动分配就更加简单</p>
-<p>需要注意的是: 如果手动分配哈希槽,则需要所有 <code>16384</code> 个槽位全部分配完,否则 <code>redis cluster</code> 无法正常工作</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h81m0wakvmj30iz09lwh3.jpg" srcset="/img/loading.gif" lazyload alt="img_2.png"></p>
-<h4 id="客户端如何查询"><a href="#客户端如何查询" class="headerlink" title="客户端如何查询"></a>客户端如何查询</h4><p>当完成数据到哈希槽的分配,哈希槽到实例的分配之后,客户端如何得知自己需要访问的数据应该请求哪个具体的实例呢</p>
-<p>首先数据到哈希槽的映射关系,可以通过 <code>CRC16(key) % 16384</code> 得到; 然而哈希槽到实例的映射关系则无法通过计算得到</p>
-<p>但是实际客户端在访问 redis 集群的时候,只需要连接上任意一个实例,就可以访问整个集群当中其他实例上的数据,这是如何做到的 -&gt; redis 的 <code>Gossip</code> 协议</p>
-<h4 id="客户端如何查询具体某个-key"><a href="#客户端如何查询具体某个-key" class="headerlink" title="客户端如何查询具体某个 key"></a>客户端如何查询具体某个 key</h4><p>集群稳定运行一段时间后,节点之间通过 <code>Gossip</code> 协议可以保证每个节点都有全量的哈希槽信息</p>
-<p>这样客户端连接任意一个实例,都能够获得整个集群的哈希槽分配情况,并且把这个分配信息缓存到自己的本地</p>
-<p>当客户端需要访问一条数据时,首先根据 <code>CRC16(key) % 16384</code> 得到当前 <code>key</code> 所属的哈希槽,再根据自己维护的实例和哈希槽的映射关系表来访问 <code>key</code> 所在的实例</p>
-<p>实际上,哈希槽和实例的对应关系也并不是一成不变的; 对于业务压力大的时候,需要新增 redis 实例; 自然也会有减少 redis 实例的情况</p>
-<p>redis 为了负载均衡,当实例个数发生变化的时候,会将哈希槽全部重新分配一次; 此时实例之间继续通过一定的通信方式将哈希槽的配置信息互相传递,然而客户端该怎么办呢</p>
-<p>redis 提供了一种 <code>重定向机制</code>,就是当客户端通过本地缓存的旧哈希槽实例映射表访问具体某个 <code>key</code> 时,如果此时的实例上并没有这个 <code>key</code> 值,就会向客户端回复一个 <code>MOVED</code> 指令, <code>MOVED</code><br>指令里面就包含了 <code>key</code> 所在最新实例的 ip 地址和端口等信息</p>
-<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">GET</span> testkey<br><span class="hljs-attribute">MOVED</span> <span class="hljs-number">7800</span> <span class="hljs-number">172.16.19.3:6379</span><br></code></pre></td></tr></table></figure>
-
-<p>其中 <code>7800</code> 表示当前 <code>key</code> 所处第 <code>7800</code> 个哈希槽,而当前哈希槽归 <code>172.16.19.3:6379</code> 这个实例维护; 这样一来客户端就可以重新向新的实例发起请求了</p>
-<p>同时客户端还会把最新的哈希槽实例映射关系更新到本地的缓存,以便下次可以直接访问而不再需要重定向 <code>MOVED</code> 了</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h81m11azd2j30hy0f1dk7.jpg" srcset="/img/loading.gif" lazyload alt="img_3.png"></p>
-<h4 id="哈希槽迁移时查询数据"><a href="#哈希槽迁移时查询数据" class="headerlink" title="哈希槽迁移时查询数据"></a>哈希槽迁移时查询数据</h4><p>有一种场景,就是当实例数量发生变更,redis 在做哈希槽迁移时,此时客户端向一个正在发生哈希槽迁移的实例发起请求,此时客户端会受到一条回复</p>
-<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs nginx"><span class="hljs-attribute">GET</span> testkey<br>(<span class="hljs-literal">error</span>) ASK <span class="hljs-number">7800</span> <span class="hljs-number">172.16.19.5:6379</span><br></code></pre></td></tr></table></figure>
-
-<p>其中 <code>7800</code> 表示当前请求的 <code>key</code> 所处的哈希槽, 返回 <code>ASK</code> 命令表示当前哈希槽正处于迁移状态, <code>172.16.19.5:6379</code> 表示数据所处的最新实例地址</p>
-<p>此时客户端需要再向实例发起 <code>ASKING</code> 命令,表示 <strong>允许</strong> 让实例返回当前请求的数据,接下来再发送 <code>GET</code> 命令得到具体的数据</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h81m15sl7cj30j20ef42s.jpg" srcset="/img/loading.gif" lazyload alt="img_4.png"></p>
-<h4 id="MOVED-和-ASK"><a href="#MOVED-和-ASK" class="headerlink" title="MOVED 和 ASK"></a>MOVED 和 ASK</h4><p><code>MOVED</code> 重定向指令是在哈希槽已经完成了迁移后,请求到老实例时回复的指令,此时客户端会根据老实例回复的信息更新自己本地缓存的哈希槽实例映射表</p>
-<p><code>ASK</code> 指令是在哈希槽正在迁移时,请求到老实例回复的指令; 此时客户端需要根据老实例回复的 <code>key</code> 所在的新实例发送 <code>ASKING</code> 指令表示允许从正在迁移哈希槽的实例中读取数据; 再发送 <code>GET</code> 指令真正读取数据;<br>此时客户端并不会更新自己本地缓存的哈希槽实例映射表</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h8264vk2nij30h30ctmz2.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
+<ol start="2">
+<li><p><code>slot</code> 信息</p>
+<ul>
+<li>接收消息的节点判断发送消息节点所维护的 <code>slot</code> 信息与本地记录是否相同</li>
+<li>如果相同,则不做任何处理</li>
+<li>如果不相同,判断 <code>currentEpoch</code> 谁更大<ul>
+<li>如果发送方 <code>currentEpoch</code> 更大,则将发送方的 <code>slot</code> 信息更新到本地</li>
+<li>如果接收方 <code>currentEpoch</code> 更大,则发送 <code>UPDATE</code> 给发送方,让发送方更新 <code>slot</code> 新</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>主从信息</p>
+<ul>
+<li>当接收方发现发送方的主从关系发生变更时,更新本地的记录</li>
+</ul>
+</li>
+<li><p>故障发现</p>
+<ul>
+<li>超过超时时间没有回复 <code>PONG</code> 的节点,会被发送 <code>PING</code> 的节点标记为 <code>疑似下线</code></li>
+<li><code>疑似下线</code> 消息会随着 <code>gossip</code> 协议在集群中传播开来</li>
+<li>每个节点收到 <code>PING</code> 之后,会检测里面对其他节点的状态信息,如果发现有 <code>疑似下线</code> 的节点,则在本地维护一个下线状态投票记录</li>
+<li>当某个节点维护的下线状态投票记录里面,对一个 <code>疑似下线</code> 节点的标记达到大多数时,当前节点就会向集群传播 <code>FAIL</code> 消息</li>
+<li>其他节点接收到 <code>FAIL</code> 消息后,立马把对应的 <code>疑似下线</code> 的节点标记为 <code>已下线</code></li>
+</ul>
+</li>
+</ol>
+<h3 id="故障恢复"><a href="#故障恢复" class="headerlink" title="故障恢复"></a>故障恢复</h3><p>当一个节点所属的 <code>master</code> 节点发生故障后,会尝试进行 <code>Fail-over 选主</code> ,由于挂掉的 <code>master</code> 可能有多个,所以需要使用类似于 <code>Raft</code> 的协议来保证最终一致性</p>
+<h4 id="currentEpoch-epoch-纪元"><a href="#currentEpoch-epoch-纪元" class="headerlink" title="currentEpoch - epoch(纪元)"></a>currentEpoch - epoch(纪元)</h4><p><code>currentEpoch</code> 表明了集群中状态变更的迭代版本号,每个节点都会记录自己当前的版本号 </p>
+<p>当集群节点创建时,无论是 <code>master</code> 还是 <code>slave</code> 都将自己的版本号 <code>currentEpoch</code> 设置为 0</p>
+<p>当节点接收到 <code>PING</code> 时,会判断发送者的 <code>currentEpoch</code> 和当前自己的 <code>currentEpoch</code></p>
+<ul>
+<li>如果发送方的 <code>currentEpoch</code> 更大,则会将自己的版本号更新为发送方的版本号</li>
+<li>如果自己的 <code>currentEpoch</code>, 则会向发送方回复 <code>UPDATE</code> 要求其更新 <code>currentEpoch</code> 为自己的 <code>currentEpoch</code></li>
+</ul>
+<p>经过 <code>gossip</code> 协议传播一段时间后,整个集群的 <code>currentEpoch</code> 最终将保持一致</p>
+<p>当集群的状态发生改变,通常是发生主从切换即 <code>master</code> 节点的故障转移时</p>
+<p><code>slave</code> 节点为了执行 <code>Fail-over 选主</code> 操作而征求其他节点的同意时,会将自己的 <code>currentEpoch + 1</code>,此时这个 <code>currentEpoch</code> 时整个集群当中最大的值</p>
+<ul>
+<li>发起 <code>Fail-over 选主</code> 的 <code>slave</code> 节点进行广播,这里的广播消息其他 <code>slave</code> 节点不会响应,只有其他 <code>master</code> 才会响应这条广播消息</li>
+<li>对于一个 <code>master</code> 来说,可能在一个时间段内有多个 <code>slave</code> 尝试进行 <code>Fail-over 选主</code> 拉票,此时的 <code>master</code> 只会为第一个拉票请求头赞成票; 剩下的其他拉票请求都头反对票</li>
+<li>当尝试 <code>Fail-over 选主</code> 的 <code>slave</code> 节点收集到所有 <code>master</code> 节点的投票信息后,判断有没有超过 <code>大多数</code></li>
+<li>如果超过了大多数节点,则发送广播消息,告知其他节点自己成为了新的 <code>master</code> 节点</li>
+<li>此时其他所有节点的 <code>currentEpoch</code> 值由于都小于新的 <code>master</code> 节点的 <code>currentEpoch</code> 值,都会在收到广播消息后,更新自己的 <code>currentEpoch</code> 为最新值; 在经过一段时间的 <code>gossip</code> 之后,整个集群的状态再次恢复一致</li>
+</ul>
+<h4 id="configEpoch-epoch-纪元"><a href="#configEpoch-epoch-纪元" class="headerlink" title="configEpoch - epoch(纪元)"></a>configEpoch - epoch(纪元)</h4><p>与 <code>currentEpoch</code> 类似,只不过 <code>configEpoch</code> 只在节点维护的哈希槽发生变化时才会改变</p>
 
                 
               </div>
@@ -380,8 +414,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>(六)redis 切片集群</div>
-      <div>https://n1ck.cyou/2022/11/11/(六)redis 切片集群/</div>
+      <div>(七)redis gossip 协议</div>
+      <div>https://n1ck.cyou/2022/11/11/(七)redis gossip 协议/</div>
     </div>
     <div class="license-meta">
       
@@ -425,18 +459,12 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2022/11/11/(%E4%B8%83)redis%20gossip%20%E5%8D%8F%E8%AE%AE/" title="(七)redis gossip 协议">
-                        <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">(七)redis gossip 协议</span>
-                        <span class="visible-mobile">Previous</span>
-                      </a>
-                    
                   </article>
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2022/11/11/(%E4%BA%94)redis%20%E5%93%A8%E5%85%B5%E6%A8%A1%E5%BC%8F/" title="(四)redis 哨兵模式">
-                        <span class="hidden-mobile">(四)redis 哨兵模式</span>
+                      <a href="/2022/11/11/(%E5%85%AD)redis%20%E5%88%87%E7%89%87%E9%9B%86%E7%BE%A4/" title="(六)redis 切片集群">
+                        <span class="hidden-mobile">(六)redis 切片集群</span>
                         <span class="visible-mobile">Next</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
