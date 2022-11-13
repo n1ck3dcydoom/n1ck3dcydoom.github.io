@@ -16,16 +16,16 @@
   <meta name="author" content="n!Ck">
   <meta name="keywords" content="">
   
-    <meta name="description" content="将 redis 当做旁路缓存使用在业务客户端和数据库持久层中间,加上 redis,此时 redis 就以旁路缓存的身份提供服务 作为缓存使用的redis 有两种方式  只读缓存 读写缓存  只读缓存redis 只提供读请求,所有的写请求都直接打到数据库 对于删除操作,当删除数据库的记录后,还需要删除 redis 里面保存的记录,以免下次又从缓存里面读到了 对于读请求,如果没有命中 redis 缓存">
+    <meta name="description" content="redis 的缓存淘汰机制想要淘汰一个缓存,有两步关键的步骤  通过一定的策略,选出 需要被淘汰 的缓存 在合适的时机,将这些缓存从内存里删除  一旦 redis 实例配置好整体缓存的大小之后,除非是只读缓存否则总会发生缓存被写满的那一刻 而淘汰缓存就必须要解决上面两个问题:如何选?什么时候删? redis 缓存淘汰策略(解决如何选问题)redis 在 4.0 以后提供了 8 种缓存淘汰策略  不">
 <meta property="og:type" content="article">
-<meta property="og:title" content="(十)redis 旁路缓存">
-<meta property="og:url" content="https://n1ck.cyou/2022/11/12/(%E5%8D%81)redis%20%E6%97%81%E8%B7%AF%E7%BC%93%E5%AD%98/index.html">
+<meta property="og:title" content="(十一)redis 缓存淘汰策略">
+<meta property="og:url" content="https://n1ck.cyou/2022/11/12/(%E5%8D%81%E4%B8%80)redis%20%E7%BC%93%E5%AD%98%E6%B7%98%E6%B1%B0%E7%AD%96%E7%95%A5/index.html">
 <meta property="og:site_name" content="n!Ck playground">
-<meta property="og:description" content="将 redis 当做旁路缓存使用在业务客户端和数据库持久层中间,加上 redis,此时 redis 就以旁路缓存的身份提供服务 作为缓存使用的redis 有两种方式  只读缓存 读写缓存  只读缓存redis 只提供读请求,所有的写请求都直接打到数据库 对于删除操作,当删除数据库的记录后,还需要删除 redis 里面保存的记录,以免下次又从缓存里面读到了 对于读请求,如果没有命中 redis 缓存">
+<meta property="og:description" content="redis 的缓存淘汰机制想要淘汰一个缓存,有两步关键的步骤  通过一定的策略,选出 需要被淘汰 的缓存 在合适的时机,将这些缓存从内存里删除  一旦 redis 实例配置好整体缓存的大小之后,除非是只读缓存否则总会发生缓存被写满的那一刻 而淘汰缓存就必须要解决上面两个问题:如何选?什么时候删? redis 缓存淘汰策略(解决如何选问题)redis 在 4.0 以后提供了 8 种缓存淘汰策略  不">
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="https://n1ck.cyou/img/redis.png">
-<meta property="article:published_time" content="2022-11-12T11:59:20.000Z">
-<meta property="article:modified_time" content="2022-11-12T12:19:01.464Z">
+<meta property="article:published_time" content="2022-11-12T12:21:06.000Z">
+<meta property="article:modified_time" content="2022-11-13T02:43:55.992Z">
 <meta property="article:author" content="n!Ck">
 <meta property="article:tag" content="redis">
 <meta name="twitter:card" content="summary_large_image">
@@ -33,7 +33,7 @@
   
   
   
-  <title>(十)redis 旁路缓存 - n!Ck playground</title>
+  <title>(十一)redis 缓存淘汰策略 - n!Ck playground</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -198,7 +198,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="(十)redis 旁路缓存"></span>
+            <span id="subtitle" data-typed-text="(十一)redis 缓存淘汰策略"></span>
           
         </div>
 
@@ -209,7 +209,7 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2022-11-12 19:59" pubdate>
+        <time datetime="2022-11-12 20:21" pubdate>
           November 12, 2022 pm
         </time>
       </span>
@@ -221,7 +221,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          724 words
+          1.6k words
         
       </span>
     
@@ -232,7 +232,7 @@
         
         
         
-          7 mins
+          14 mins
         
       </span>
     
@@ -270,32 +270,63 @@
         <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
-            <h1 style="display: none">(十)redis 旁路缓存</h1>
+            <h1 style="display: none">(十一)redis 缓存淘汰策略</h1>
             
             
               <div class="markdown-body">
                 
-                <h3 id="将-redis-当做旁路缓存使用"><a href="#将-redis-当做旁路缓存使用" class="headerlink" title="将 redis 当做旁路缓存使用"></a>将 redis 当做旁路缓存使用</h3><p>在业务客户端和数据库持久层中间,加上 redis,此时 redis 就以旁路缓存的身份提供服务</p>
-<p>作为缓存使用的redis 有两种方式</p>
+                <h3 id="redis-的缓存淘汰机制"><a href="#redis-的缓存淘汰机制" class="headerlink" title="redis 的缓存淘汰机制"></a>redis 的缓存淘汰机制</h3><p>想要淘汰一个缓存,有两步关键的步骤</p>
 <ol>
-<li>只读缓存</li>
-<li>读写缓存</li>
+<li>通过一定的策略,选出 <strong>需要被淘汰</strong> 的缓存</li>
+<li>在合适的时机,将这些缓存从内存里删除</li>
 </ol>
-<h4 id="只读缓存"><a href="#只读缓存" class="headerlink" title="只读缓存"></a>只读缓存</h4><p>redis 只提供读请求,所有的写请求都直接打到数据库</p>
-<p>对于删除操作,当删除数据库的记录后,还需要删除 redis 里面保存的记录,以免下次又从缓存里面读到了</p>
-<p>对于读请求,如果没有命中 redis 缓存,则会直接访问数据库,并且回写到 redis 里面,以便下次直接从 redis 里获取数据</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h82lz1mtthj30j50acgnw.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
-<p>对于只读缓存来说,数据库能够提供数据的可靠性保证,不会有丢失数据的风险; 所以对于那些只读的数据例如图片,短视频等内容,可以考虑使用 redis 作为只读缓存</p>
-<h4 id="读写缓存"><a href="#读写缓存" class="headerlink" title="读写缓存"></a>读写缓存</h4><p>对于读写缓存来说,redis 不仅仅要处理读请求,现在还负责处理写请求,这样最新的数据都只会在 redis 里面保存; 如果发生异常宕机的话,这些新数据就会因为没有持久化到数据库里导致数据丢失</p>
-<p>对于读写缓存来说,有两种配置策略</p>
+<p>一旦 redis 实例配置好整体缓存的大小之后,除非是只读缓存否则总会发生缓存被写满的那一刻</p>
+<p>而淘汰缓存就必须要解决上面两个问题:如何选?什么时候删?</p>
+<h3 id="redis-缓存淘汰策略-解决如何选问题"><a href="#redis-缓存淘汰策略-解决如何选问题" class="headerlink" title="redis 缓存淘汰策略(解决如何选问题)"></a>redis 缓存淘汰策略(解决如何选问题)</h3><p>redis 在 4.0 以后提供了 8 种缓存淘汰策略</p>
 <ol>
-<li>同步直写: 客户端将写请求发送给 redis 之后,也会发送给数据库进行处理; 等到缓存和数据库都返回处理成功后,才返回给业务端; 这样即使发生宕机,数据库里面也有最新的数据,提供了数据的可靠性保证</li>
+<li>不进行缓存淘汰,只有 <code>noeviction</code> 这一种 (通常也没有人会选择这种策略)</li>
+<li>会进行缓存淘汰的其他 7 种策略还可以按照两类进行划分<ul>
+<li>设置了过期时间的数据</li>
+<li>所有范围内的数据</li>
+</ul>
+</li>
 </ol>
-<p>同步直写的缺点就是: 由于 redis 和数据库处理数据的速度不同,很可能 redis 在短时间之内就返回了,而等待数据库处理完成后已经过去一段时间; 这无疑增大了请求的整体耗时</p>
-<ol start="3">
-<li>异步回写: 客户端将所有写请求都放到缓存里面处理; 等到这些数据即将从缓存里面被淘汰时,redis 将这些最新的数据写回数据库; 这样所有的读写请求都在 redis 处理,客户端可以在很短的时间的回复业务方的请求; 只不过一旦发生异常宕机,那些还没来得及写回数据库的数据就会有丢失的风险了</li>
+<h4 id="设置了过期时间数据的淘汰策略"><a href="#设置了过期时间数据的淘汰策略" class="headerlink" title="设置了过期时间数据的淘汰策略"></a>设置了过期时间数据的淘汰策略</h4><ol>
+<li>volatile-ttl: 在筛选时,针对设置了过期时间的键值对,根据过期时间的先后进行删除,越早过期的数据越早被删除</li>
+<li>volatile-random: 在筛选时,针对设置了过期时间的键值对,随机选出若干数据进行删除</li>
+<li>volatile-lru: 在筛选时,针对设置了过期时间的键值对,使用 <code>LRU</code> 算法选择需要淘汰的数据</li>
+<li>volatile-lfu: 在筛选时,针对设置了过期时间的键值对,使用 <code>LFU</code> 算法选择需要淘汰的数据</li>
 </ol>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h82lz7158pj30is0a1abo.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
+<h4 id="所有数据的淘汰策略"><a href="#所有数据的淘汰策略" class="headerlink" title="所有数据的淘汰策略"></a>所有数据的淘汰策略</h4><ol>
+<li>allkeys-random: 针对所有数据随机选择并删除</li>
+<li>allkeys-lru: 针对所有数据,使用 <code>LRU</code> 算法选择需要淘汰的数据</li>
+<li>allkeys-lfu: 针对所有数据,使用 <code>LFU</code> 算法选择需要淘汰的数据</li>
+</ol>
+<p>需要注意的是,如果 redis 配置的是针对所有数据的淘汰策略; 那么按照策略选出来的数据即使还没有到过期时间,也会被淘汰掉</p>
+<h3 id="LRU-算法"><a href="#LRU-算法" class="headerlink" title="LRU 算法"></a>LRU 算法</h3><p><code>LRU</code> 算法即 <code>最近最少使用</code> , 可以把一段时间内最不常用的数据筛选出来,而那些频繁被访问的热数据则会继续留在缓存里面</p>
+<p><code>LRU</code> 会把所有缓存页组织为一条链表,表头是 <code>MRU端</code> 表尾是 <code>LRU端</code></p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h83ayzqhv2j30ih0iijvw.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
+<p>当 <code>LRU</code> 缓存里面有数据被命中了,则会被放置到表头; 而那些迟迟没有命中的数据则会随着时间推移慢慢来到表尾</p>
+<p>当 <code>LRU</code> 被放满,而新的请求数据不在 <code>LRU</code> 里面,此时 <code>LRU</code> 发生了缺页就会从磁盘里面加载最新的数据页放到表头; 这样处于表尾的冷数据就会被淘汰掉</p>
+<p>朴素的 <code>LRU</code> 根据局部性原理,认为当前被访问的数据接下来还会访问的概率会很大,所以直接放到表头; 而 <code>LRU</code> 当有大量数据被访问时(类似 mysql 全表扫描导致 <code>buffer pool</code> 缓冲区污染的问题),会带来很多链表节点的移动操作,此时可能会导致 redis 性能下降</p>
+<p>redis 在朴素 <code>LRU</code> 算法上进行了一些改良,并没有通过传统的链表组织数据</p>
+<p>redis 会记录每个数据的最近一次访问时间戳(由 redis 的抽象数据结构 <code>redisObject</code> 记录),这个字段记为 <code>lru</code> 值</p>
+<p>当 redis 需要淘汰数据时,首次会根据配置一次性选出 <code>N</code> 个数据放到一个集合里面; 接下来 redis 会比较这 <code>N</code> 个数据的 <code>lru</code> 值,把最小 <code>lru</code> 值的数据淘汰出去</p>
+<p>后续再次需要进行数据淘汰的时候,redis 会把需要淘汰的数据加入到第一次淘汰时的集合里面去; 这里能够进入淘汰集合的要求是: <code>能进入淘汰集合的数据的 lru 字段必须必集合里面的最小 lru 值还要小</code></p>
+<p>当淘汰集合放满之后,redis 就会把集合中 <code>lru</code> 最小的数据淘汰出去</p>
+<p>这样 redis 就不用维护一个所有数据的链表,也不用每次移动链表节点,只需要比较 <code>redisObject</code> 的 <code>lru</code> 字段即可, 提升了缓存的性能</p>
+<ul>
+<li>如果系统有明显冷热数据的情况,优先选择 <code>allkeys-lru</code> 策略</li>
+<li>如果系统没有明显的冷热数据区分,选择 <code>allkeys-random</code> 进行随机淘汰就可以</li>
+<li>如果系统有 <strong>置顶</strong> 等要求,则选择 <code>volatile-lru</code> 策略,并且将这些置顶的数据设置为永不过期</li>
+</ul>
+<h3 id="如何删除被淘汰的数据"><a href="#如何删除被淘汰的数据" class="headerlink" title="如何删除被淘汰的数据"></a>如何删除被淘汰的数据</h3><p>与 mysql 的 <code>buffer pool</code> 淘汰缓存页类似,同样 redis 也将缓存页分为 <code>干净页</code> 和 <code>脏页</code> </p>
+<ul>
+<li><p>如果需要淘汰的是一张 <code>干净页</code> ,那么直接从内存里面出删除即可</p>
+</li>
+<li><p>如果淘汰的是一张 <code>脏页</code> ,那么从内存删除前还需要把脏页刷入数据库之后才能删除</p>
+</li>
+</ul>
 
                 
               </div>
@@ -341,8 +372,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>(十)redis 旁路缓存</div>
-      <div>https://n1ck.cyou/2022/11/12/(十)redis 旁路缓存/</div>
+      <div>(十一)redis 缓存淘汰策略</div>
+      <div>https://n1ck.cyou/2022/11/12/(十一)redis 缓存淘汰策略/</div>
     </div>
     <div class="license-meta">
       
@@ -386,18 +417,12 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2022/11/12/(%E5%8D%81%E4%B8%80)redis%20%E7%BC%93%E5%AD%98%E6%B7%98%E6%B1%B0%E7%AD%96%E7%95%A5/" title="(十一)redis 缓存淘汰策略">
-                        <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">(十一)redis 缓存淘汰策略</span>
-                        <span class="visible-mobile">Previous</span>
-                      </a>
-                    
                   </article>
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2022/11/12/(%E4%B9%9D)redis%20%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90/" title="(九)redis 性能分析">
-                        <span class="hidden-mobile">(九)redis 性能分析</span>
+                      <a href="/2022/11/12/(%E5%8D%81)redis%20%E6%97%81%E8%B7%AF%E7%BC%93%E5%AD%98/" title="(十)redis 旁路缓存">
+                        <span class="hidden-mobile">(十)redis 旁路缓存</span>
                         <span class="visible-mobile">Next</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
