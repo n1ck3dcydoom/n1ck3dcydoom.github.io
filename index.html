@@ -221,6 +221,73 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2022/11/13/(%E5%8D%81%E4%BA%8C)redis%20%E7%BC%93%E5%AD%98%E9%97%AE%E9%A2%98/" target="_self">
+          <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(十二)redis 缓存问题">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2022/11/13/(%E5%8D%81%E4%BA%8C)redis%20%E7%BC%93%E5%AD%98%E9%97%AE%E9%A2%98/" target="_self">
+          (十二)redis 缓存问题
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt " href="/2022/11/13/(%E5%8D%81%E4%BA%8C)redis%20%E7%BC%93%E5%AD%98%E9%97%AE%E9%A2%98/" target="_self">
+        <div>
+          redis 缓存所面临的问题在高并发业务下,数据库往往是性能最为薄弱的环节; 所以使用 redis 放在业务和数据库之间,作为旁路缓存起到一个缓冲的作用,避免所有请求全部打到数据库; 这样可以大大的缓解数据库的压力 当 redis 作为旁路缓存使用时,就不得不考虑以下几个问题  缓存穿透 缓存击穿 缓存雪崩 缓存污染或者缓存写满(回顾下缓存的淘汰策略) 缓存和数据库的一致性问题  缓存穿透什么是
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-11-13 10:45" pubdate>
+              2022-11-13
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/redis/" class="category-chain-item">redis</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/redis/">#redis</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+      <div class="col-12 col-md-4 m-auto index-img">
         <a href="/2022/11/12/(%E5%8D%81%E4%B8%80)redis%20%E7%BC%93%E5%AD%98%E6%B7%98%E6%B1%B0%E7%AD%96%E7%95%A5/" target="_self">
           <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(十一)redis 缓存淘汰策略">
         </a>
@@ -782,73 +849,6 @@
           <div class="post-meta mr-3">
             <i class="iconfont icon-date"></i>
             <time datetime="2022-11-10 09:25" pubdate>
-              2022-11-10
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3 d-flex align-items-center">
-            <i class="iconfont icon-category"></i>
-            
-
-<span class="category-chains">
-  
-  
-    
-      <span class="category-chain">
-        
-  <a href="/categories/redis/" class="category-chain-item">redis</a>
-  
-  
-
-      </span>
-    
-  
-</span>
-
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/redis/">#redis</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-      <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/10/(%E4%BA%8C)redis%20%E4%B8%BA%E4%BB%80%E4%B9%88%E5%BF%AB/" target="_self">
-          <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(二)redis 为什么快">
-        </a>
-      </div>
-    
-    <article class="col-12 col-md-8 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2022/11/10/(%E4%BA%8C)redis%20%E4%B8%BA%E4%BB%80%E4%B9%88%E5%BF%AB/" target="_self">
-          (二)redis 为什么快
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt " href="/2022/11/10/(%E4%BA%8C)redis%20%E4%B8%BA%E4%BB%80%E4%B9%88%E5%BF%AB/" target="_self">
-        <div>
-          redis 使用单线程 完全基于内存,绝大部分请求都是在内存中计算处理,少量需要持久化的操作才会涉及到写磁盘 数据结构是专门设计的,操作简单 单线程,省去了线程间的上下文切换和 CPU 消耗,不存在资源竞争,不涉及加锁和释放的操作  这里的单线程指的是 处理网络 IO 请求和键值对读写(核心工作线程) 是单线程的,而对于那些需要持久化的操作,例如写日志,异步删除,集群间节点数据同步等是有额外线程执
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2022-11-10 08:38" pubdate>
               2022-11-10
             </time>
           </div>

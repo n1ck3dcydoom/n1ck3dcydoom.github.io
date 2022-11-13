@@ -221,6 +221,73 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2022/11/10/(%E4%BA%8C)redis%20%E4%B8%BA%E4%BB%80%E4%B9%88%E5%BF%AB/" target="_self">
+          <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(二)redis 为什么快">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2022/11/10/(%E4%BA%8C)redis%20%E4%B8%BA%E4%BB%80%E4%B9%88%E5%BF%AB/" target="_self">
+          (二)redis 为什么快
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt " href="/2022/11/10/(%E4%BA%8C)redis%20%E4%B8%BA%E4%BB%80%E4%B9%88%E5%BF%AB/" target="_self">
+        <div>
+          redis 使用单线程 完全基于内存,绝大部分请求都是在内存中计算处理,少量需要持久化的操作才会涉及到写磁盘 数据结构是专门设计的,操作简单 单线程,省去了线程间的上下文切换和 CPU 消耗,不存在资源竞争,不涉及加锁和释放的操作  这里的单线程指的是 处理网络 IO 请求和键值对读写(核心工作线程) 是单线程的,而对于那些需要持久化的操作,例如写日志,异步删除,集群间节点数据同步等是有额外线程执
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-11-10 08:38" pubdate>
+              2022-11-10
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/redis/" class="category-chain-item">redis</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/redis/">#redis</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+      <div class="col-12 col-md-4 m-auto index-img">
         <a href="/2022/11/09/(%E4%B8%80)redis%20%E5%BA%95%E5%B1%82%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/" target="_self">
           <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(一)redis 底层数据结构">
         </a>
@@ -782,73 +849,6 @@
           <div class="post-meta mr-3">
             <i class="iconfont icon-date"></i>
             <time datetime="2022-11-05 16:29" pubdate>
-              2022-11-05
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3 d-flex align-items-center">
-            <i class="iconfont icon-category"></i>
-            
-
-<span class="category-chains">
-  
-  
-    
-      <span class="category-chain">
-        
-  <a href="/categories/mysql/" class="category-chain-item">mysql</a>
-  
-  
-
-      </span>
-    
-  
-</span>
-
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/mysql/">#mysql</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-      <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/05/mysql/(%E5%85%AB)mysql%20count%20%E5%87%BD%E6%95%B0%E6%9C%BA%E5%88%B6/" target="_self">
-          <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(八)mysql count 函数机制">
-        </a>
-      </div>
-    
-    <article class="col-12 col-md-8 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2022/11/05/mysql/(%E5%85%AB)mysql%20count%20%E5%87%BD%E6%95%B0%E6%9C%BA%E5%88%B6/" target="_self">
-          (八)mysql count 函数机制
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt " href="/2022/11/05/mysql/(%E5%85%AB)mysql%20count%20%E5%87%BD%E6%95%B0%E6%9C%BA%E5%88%B6/" target="_self">
-        <div>
-          count(*) 的实现原理 在 Myisam 上,每个表的总行数保存在了磁盘上,因此 count(*) 可以在 O(1) 的时间复杂度之内得到,效率非常高 在 InnoDB 上,不会单独保存表的总行数,因此只能通过遍历所有数据,完成统计得到  为什么 InnoDB 不保存总记录数,因为 MVCC 多版本并发控制导致,即使每次执行 count(*) 语句时,快照读返回的行数都不一定是准确的 例如事
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2022-11-05 15:52" pubdate>
               2022-11-05
             </time>
           </div>

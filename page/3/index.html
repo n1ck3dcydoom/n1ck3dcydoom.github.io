@@ -221,6 +221,73 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2022/11/05/mysql/(%E5%85%AB)mysql%20count%20%E5%87%BD%E6%95%B0%E6%9C%BA%E5%88%B6/" target="_self">
+          <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(八)mysql count 函数机制">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2022/11/05/mysql/(%E5%85%AB)mysql%20count%20%E5%87%BD%E6%95%B0%E6%9C%BA%E5%88%B6/" target="_self">
+          (八)mysql count 函数机制
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt " href="/2022/11/05/mysql/(%E5%85%AB)mysql%20count%20%E5%87%BD%E6%95%B0%E6%9C%BA%E5%88%B6/" target="_self">
+        <div>
+          count(*) 的实现原理 在 Myisam 上,每个表的总行数保存在了磁盘上,因此 count(*) 可以在 O(1) 的时间复杂度之内得到,效率非常高 在 InnoDB 上,不会单独保存表的总行数,因此只能通过遍历所有数据,完成统计得到  为什么 InnoDB 不保存总记录数,因为 MVCC 多版本并发控制导致,即使每次执行 count(*) 语句时,快照读返回的行数都不一定是准确的 例如事
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-11-05 15:52" pubdate>
+              2022-11-05
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/mysql/" class="category-chain-item">mysql</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/mysql/">#mysql</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+      <div class="col-12 col-md-4 m-auto index-img">
         <a href="/2022/11/05/mysql/(%E4%B8%83)mysql%20%E8%A1%A8%E7%A9%BA%E9%97%B4%E5%9B%9E%E6%94%B6/" target="_self">
           <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(七)mysql 表空间回收">
         </a>
@@ -783,73 +850,6 @@
             <i class="iconfont icon-date"></i>
             <time datetime="2022-10-30 17:21" pubdate>
               2022-10-30
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3 d-flex align-items-center">
-            <i class="iconfont icon-category"></i>
-            
-
-<span class="category-chains">
-  
-  
-    
-      <span class="category-chain">
-        
-  <a href="/categories/gin/" class="category-chain-item">gin</a>
-  
-  
-
-      </span>
-    
-  
-</span>
-
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/gin/">#gin</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-      <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/10/29/gin/gin%E6%BA%90%E7%A0%81%E8%A7%A3%E8%AF%BB(%E4%BA%8C)/" target="_self">
-          <img src="/img/gin.png" srcset="/img/loading.gif" lazyload alt="gin 源码解读 (二)">
-        </a>
-      </div>
-    
-    <article class="col-12 col-md-8 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2022/10/29/gin/gin%E6%BA%90%E7%A0%81%E8%A7%A3%E8%AF%BB(%E4%BA%8C)/" target="_self">
-          gin 源码解读 (二)
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt " href="/2022/10/29/gin/gin%E6%BA%90%E7%A0%81%E8%A7%A3%E8%AF%BB(%E4%BA%8C)/" target="_self">
-        <div>
-          简单回顾: gin 从 Run() 函数启动容器之后 注册路由,添加路由中间函数的调用链 到使用 go 底层的 net 库绑定地址和端口,阻塞监听端口上的请求 到最后通过中间函数的调用链完成请求的处理 这里来看看 gin 容器是如何初始化的,都分别作了什么 gin 容器的初始化gin 提供了两个最常用的初始化方法  gin.New() gin.Default()  其中 Default() 就是在
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2022-10-29 15:44" pubdate>
-              2022-10-29
             </time>
           </div>
         
