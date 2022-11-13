@@ -25,7 +25,7 @@
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="https://n1ck.cyou/img/redis.png">
 <meta property="article:published_time" content="2022-11-13T02:45:45.000Z">
-<meta property="article:modified_time" content="2022-11-13T03:53:01.035Z">
+<meta property="article:modified_time" content="2022-11-13T06:48:43.261Z">
 <meta property="article:author" content="n!Ck">
 <meta property="article:tag" content="redis">
 <meta name="twitter:card" content="summary_large_image">
@@ -221,7 +221,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          2.3k words
+          4.9k words
         
       </span>
     
@@ -232,7 +232,7 @@
         
         
         
-          20 mins
+          41 mins
         
       </span>
     
@@ -341,6 +341,80 @@
 <p>服务限流也是一种有效手段,例如业务的请求量是 <code>10000/s</code> ,而其中 <code>9000</code> 个可以在 redis 处理直接返回,剩下的 <code>1000</code> 个只能由数据库提供支持</p>
 <p>在某一时刻 redis 宕机不可用,此时大量 <code>key</code> 全部失效,导致请求压力一下子来到了数据库,引起缓存雪崩</p>
 <p>这个时候当业务端发现 redis 不可用,或者发现缓存雪崩(通常监控到数据库的请求量突增的情况)时,可以在业务层启动限流,让原来的 <code>10000/s</code> 请求量限制到 <code>1000/s</code><br>这样数据库的压力与原来保持一致,可以避免缓存雪崩时数据库的性能被严重影响</p>
+<h3 id="缓存和数据库之间的数据一致性问题"><a href="#缓存和数据库之间的数据一致性问题" class="headerlink" title="缓存和数据库之间的数据一致性问题"></a>缓存和数据库之间的数据一致性问题</h3><p>将 redis 当做旁路缓存使用,只要涉及到数据的更新,就很容易出现缓存和数据库之间的一致性问题</p>
+<p>旁路缓存的一致性保证了什么?</p>
+<ol>
+<li>如果缓存中有数据,则缓存中的数据必须和数据库里的数据保持一致</li>
+<li>如果缓存里面没有数据,则数据库里的数据必须是最新值</li>
+</ol>
+<p>任何不满足上述两点的情况,都属于数据不一致的问题</p>
+<h3 id="读写缓存的数据一致性问题"><a href="#读写缓存的数据一致性问题" class="headerlink" title="读写缓存的数据一致性问题"></a>读写缓存的数据一致性问题</h3><p>对于 <code>读写缓存</code> 来说,有两种写回数据库的策略</p>
+<ol>
+<li>同步直写:写缓存时,也同步写数据库,两个都写入成功后才返回成功,保证数据的强一致性</li>
+<li>异步回写:写缓存成功后就返回操作成功,等缓存页被淘汰时,当做 <code>脏页</code> 刷入数据库</li>
+</ol>
+<p>对于有强一致性要求的场景,就只能采用同步直写策略; 且业务端需要把写缓存和写数据库放到同一个事务里面操作; 通过事务的原子性保证要么全部写成功,要么全部失败回滚</p>
+<p>对于 <code>只读缓存</code> 来说</p>
+<p>如果有新增数据,就直接写入数据库,这样未命中缓存的请求就可以通过数据库拿到最新数据,并且写回缓存</p>
+<p>如果有更新数据,则分两种策略:</p>
+<ol>
+<li>先删除缓存的数据,再更新数据库</li>
+<li>先更新数据库,然后再删除缓存的数据</li>
+</ol>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h83hzqwf0hj30hg08a0tz.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
+<ol>
+<li>新增数据时,符合旁路缓存的一致性要求,不会产生一致性问题</li>
+<li>删改数据时,如果采用先删缓存,再删数据库</li>
+</ol>
+<p>如果缓存删除成功,但是数据库更新失败; 后续的请求在缓存未命中的情况下,就会从数据库里面取到旧值</p>
+<p>或者说线程 A 准备更新记录,如果刚把缓存的数据删除; 此时线程 B 读取数据缓存缺失,就会从数据库里面取到还没来得及更新的旧值,导致数据不一致</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h83i0ab1nbj30j609iq4u.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
+<ol start="3">
+<li>删改数据时,如果采用先删数据库,再删缓存的策略</li>
+</ol>
+<p>如果数据库删除成功,缓存删除失败; 后续的请求直接命中缓存,取到旧数据</p>
+<p>或者说线程 A 准备更新数据,刚刚把数据库里面的数据更新掉; 此时线程 B 读取数据命中缓存后直接返回,此时线程 B 读到的是线程 A 还没来得及更新的旧值,导致数据不一致问题再次发生</p>
+<p>可以看到,在并发场景下,读写数据的数据一致性问题难以得到保障</p>
+<h3 id="如何解决读写数据库的数据一致性问题"><a href="#如何解决读写数据库的数据一致性问题" class="headerlink" title="如何解决读写数据库的数据一致性问题"></a>如何解决读写数据库的数据一致性问题</h3><p>无论写请求时更新还是删除,在操作缓存的时候,都进行删除操作,即使是更新数据</p>
+<p>考虑两个并发线程 A,B 同时更新一条数据</p>
+<ol>
+<li>A 先更新数据库,B 接着更新数据库,此时数据库里面记录的最新值是 B 的结果</li>
+<li>当 B 更新完数据库后,更新缓存里面的旧值后返回,B 完成请求</li>
+<li>此时 A 拿着自己从数据库里面刚更新的旧值,又把缓存里面 B 更新的新值给覆盖掉,此时产生了数据不一致问题</li>
+</ol>
+<p>如果上述两个线程在更新数据库之后,都采用删除缓存的操作,就不会有数据不一致的问题产生</p>
+<h4 id="更新缓存-或者更新数据库失败的场景-可以采用消息队列进行重试"><a href="#更新缓存-或者更新数据库失败的场景-可以采用消息队列进行重试" class="headerlink" title="更新缓存,或者更新数据库失败的场景,可以采用消息队列进行重试"></a>更新缓存,或者更新数据库失败的场景,可以采用消息队列进行重试</h4><p>首先将需要更新或者删除的数据发到消息队列里,然后更新或删除数据库或者缓存里面的数据,如果这个步骤失败了则从消息队里面取出消息进行重试</p>
+<p>直到数据库和缓存的数据都已经更新完成之后,把消息队列里面的消息移除,避免重复消费</p>
+<p>如果重试次数达到阈值,则直接向业务端返回报错</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h83i027ep7j30j80b4ju1.jpg" srcset="/img/loading.gif" lazyload alt="img_2.png"></p>
+<p>这个过程当中,仍然存在数据不一致的问题,只不过重试机制保证的是数据的最终一致性,无法保证数据的强一致性</p>
+<h4 id="先删除缓存-再更新数据库"><a href="#先删除缓存-再更新数据库" class="headerlink" title="先删除缓存,再更新数据库"></a>先删除缓存,再更新数据库</h4><p>线程 A 准备更新数据,刚刚把数据库里面的数据更新掉; 线程 B 读取数据命中缓存后直接返回,此时线程 B 读到的是线程 A 还没来得及更新的旧值</p>
+<p>如果是删除而不是更新操作,上面的线程 B 可能会把数据库里面的旧值继续写回缓存; 这样在线程 A 对缓存的更新操作完成之前,后续的并发请求仍然会从缓存里面读取到旧值</p>
+<h4 id="延时双删-策略"><a href="#延时双删-策略" class="headerlink" title="延时双删 策略"></a>延时双删 策略</h4><p>为了尽可能避免 <code>先删除缓存,再更新数据库</code> 策略下的数据不一致问题</p>
+<p>简单来说,就是在写数据库的前后,都执行一次缓存的删除操作,伪代码如下</p>
+<figure class="highlight q"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs q">redis.<span class="hljs-keyword">delete</span>(<span class="hljs-built_in">key</span>)<br>mysql.<span class="hljs-keyword">update</span>(<span class="hljs-built_in">key</span>)<br>sleep(n)<br>redis.<span class="hljs-keyword">delete</span>(<span class="hljs-built_in">key</span>)<br></code></pre></td></tr></table></figure>
+
+<p>其中有个关键点就是 <code>sleep(n)</code> ,这里的等待时间,是为了保证读请求结束后,写请求可以把读请求因为缓存缺失而写回缓存的脏数据给删除掉</p>
+<p>问题是这个 <code>n</code> 值是一个很难确认的数值; 如果 <code>n</code> 值过大,则会导致后续的读请求可能继续读到脏数据; 如果 <code>n</code> 值过小,也可能导致发生脏读的请求还没写入缓存,此时写请求就结束了,接着发生脏读的请求又把脏数据写回缓存</p>
+<p><strong>实际上延时双删是非常不靠谱的解决方案,因为这个 <code>sleep(n)</code> 的评估非常难,而且 <code>sleep(n)</code> 这一步本就不可避免的增大了链路的整体耗时</strong></p>
+<p>如果非要采用 <code>先删除缓存,再更新数据库</code> 的策略,最好使用 <code>消息队列</code> 将第二次删除操作异步化</p>
+<p>这样可以在不 <strong>太</strong> 影响链路整体耗时的情况下,借助 <code>消息队列</code> 的异步和重试机制,保证数据的最终一致性</p>
+<h4 id="先更新数据库-再删除缓存"><a href="#先更新数据库-再删除缓存" class="headerlink" title="先更新数据库,再删除缓存"></a>先更新数据库,再删除缓存</h4><p>对于旁路缓存来说,采用的就是 <code>先更新数据库,再删除缓存</code> 的策略</p>
+<p>但是不可避免也会存在数据不一致的问题</p>
+<p>线程 A 更新数据库之后,还没来得及删除缓存时,线程 B 已经读取到缓存的旧值并返回</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h83i0lmu3hj30j508q0wf.jpg" srcset="/img/loading.gif" lazyload alt="img_3.png"></p>
+<h2 id="总结-无论是先删缓存还是先操作数据库-都存在数据不一致的问题"><a href="#总结-无论是先删缓存还是先操作数据库-都存在数据不一致的问题" class="headerlink" title="总结: 无论是先删缓存还是先操作数据库,都存在数据不一致的问题"></a>总结: 无论是先删缓存还是先操作数据库,都存在数据不一致的问题</h2><p>而先删缓存,在操作数据库,其最终结果可能连最终一致性都无法得到保障; 只能通过额外的步骤来保证数据的最终一致性,但是这样又引入了更高的系统复杂度</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h83i0qo8aoj30k408qq4y.jpg" srcset="/img/loading.gif" lazyload alt="img_4.png"></p>
+<p>可以看到,在线程 A 删除缓存之后, 线程 B 在 A 更新数据库之前已经读取到了旧值,并且还把旧值给写回缓存了; 这样后续的请求都只能读到缓存里面的脏数据; 数据的最终一致性没有得到保证</p>
+<p>而先操作数据库,再删除缓存,能够保证数据的最终一致性</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h83i0va75rj30kp0ahjtw.jpg" srcset="/img/loading.gif" lazyload alt="img_5.png"></p>
+<p>可以看到当线程 A 更新数据库后,线程 B 从缓存里面读取到旧值返回,当线程 A 将缓存里面的旧值删掉后,下一个请求就会把数据库里面的最新值写回缓存; 就这样保证了数据的最终一致性</p>
+<p>即使也有数据不一致的问题产生,但是先操作数据库,再删除缓存能够保证数据的最终一致性; 对于大部分能够不需要强一致性的业务来说,这就是最简单的解决方案</p>
+<p>考虑一种特殊情况,如果某个数据刚好过期,或者缓存里面压根就没有</p>
+<p>此时线程 B 先从数据库里面读到了旧值,接着线程 A 更新数据库然后删除缓存(即使没有也执行删除操作),最后线程 B 再把刚刚读到的旧值给写回缓存,这样后续所有请求都会读取到旧值,导致数据不一致问题产生</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h83i0zoxtoj30l509ywgx.jpg" srcset="/img/loading.gif" lazyload alt="img_6.png"></p>
+<p>在实际情况下,这要求线程 B 从数据库里读出旧值到写回缓存的这段期间时间长于线程 A 更新数据库后再删除缓存</p>
+<p>更新数据库的时间通常比查询数据库的时间更长,而线程 B 仅仅是查询数据库,却反而比线程 A 更新数据还要花更长的时间; 这种概率非常小</p>
 
                 
               </div>
