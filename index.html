@@ -221,6 +221,73 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2022/11/13/(%E5%8D%81%E4%B8%89)redis%20%E5%8E%9F%E5%AD%90%E6%80%A7%E9%97%AE%E9%A2%98/" target="_self">
+          <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(十三)redis 原子性问题">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2022/11/13/(%E5%8D%81%E4%B8%89)redis%20%E5%8E%9F%E5%AD%90%E6%80%A7%E9%97%AE%E9%A2%98/" target="_self">
+          (十三)redis 原子性问题
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt " href="/2022/11/13/(%E5%8D%81%E4%B8%89)redis%20%E5%8E%9F%E5%AD%90%E6%80%A7%E9%97%AE%E9%A2%98/" target="_self">
+        <div>
+          并发场景下如何保证正确性并发读取一个数据不需要额外考虑,因为本身读操作之间是共享的 并发写一个数据则需要考虑互斥问题,同一时间对于同一个数据来说只能有一个线程进行写操作,其他线程都必须等待; 不然就会导致严重的并发问题  例如这个例子,线程 A 和线程 B 同时更新一个库存值,由于并没有任何额外的并发控制,导致最终的数据表现和预期不一致 这是由于线程对库存的可以拆分为 3 个子步骤:  获取当前的
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-11-13 16:56" pubdate>
+              2022-11-13
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/redis/" class="category-chain-item">redis</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/redis/">#redis</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+      <div class="col-12 col-md-4 m-auto index-img">
         <a href="/2022/11/13/(%E5%8D%81%E4%BA%8C)redis%20%E7%BC%93%E5%AD%98%E9%97%AE%E9%A2%98/" target="_self">
           <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(十二)redis 缓存问题">
         </a>
@@ -783,73 +850,6 @@
             <i class="iconfont icon-date"></i>
             <time datetime="2022-11-11 08:04" pubdate>
               2022-11-11
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3 d-flex align-items-center">
-            <i class="iconfont icon-category"></i>
-            
-
-<span class="category-chains">
-  
-  
-    
-      <span class="category-chain">
-        
-  <a href="/categories/redis/" class="category-chain-item">redis</a>
-  
-  
-
-      </span>
-    
-  
-</span>
-
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/redis/">#redis</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-      <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/10/(%E4%B8%89)redis%20%E6%8C%81%E4%B9%85%E5%8C%96%E6%9C%BA%E5%88%B6/" target="_self">
-          <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(三)redis 持久化机制">
-        </a>
-      </div>
-    
-    <article class="col-12 col-md-8 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2022/11/10/(%E4%B8%89)redis%20%E6%8C%81%E4%B9%85%E5%8C%96%E6%9C%BA%E5%88%B6/" target="_self">
-          (三)redis 持久化机制
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt " href="/2022/11/10/(%E4%B8%89)redis%20%E6%8C%81%E4%B9%85%E5%8C%96%E6%9C%BA%E5%88%B6/" target="_self">
-        <div>
-          redis 的持久化机制由于 redis 是内存型数据库,当 redis 实例发生异常宕机时,其内存里面的数据将会全部丢失; 所以 redis 也需要通过持久化操作来避免异常宕机导致的数据丢失问题发生 redis 提供了 3 种持久化方式:  AOF 日志 RDB 内存快照 MIX 两者的混合模式  AOF 日志mysql 也有写日志,而且 mysql 的特性是写 前日志 也就是说在实际的数据写入
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2022-11-10 09:25" pubdate>
-              2022-11-10
             </time>
           </div>
         

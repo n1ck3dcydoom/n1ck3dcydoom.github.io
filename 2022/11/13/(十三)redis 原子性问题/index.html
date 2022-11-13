@@ -1,0 +1,735 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-default-color-scheme=dark>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/logo-Linkin-Park.png">
+  <link rel="icon" href="/img/logo-Linkin-Park.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="n!Ck">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="并发场景下如何保证正确性并发读取一个数据不需要额外考虑,因为本身读操作之间是共享的 并发写一个数据则需要考虑互斥问题,同一时间对于同一个数据来说只能有一个线程进行写操作,其他线程都必须等待; 不然就会导致严重的并发问题  例如这个例子,线程 A 和线程 B 同时更新一个库存值,由于并没有任何额外的并发控制,导致最终的数据表现和预期不一致 这是由于线程对库存的可以拆分为 3 个子步骤:  获取当前的">
+<meta property="og:type" content="article">
+<meta property="og:title" content="(十三)redis 原子性问题">
+<meta property="og:url" content="https://n1ck.cyou/2022/11/13/(%E5%8D%81%E4%B8%89)redis%20%E5%8E%9F%E5%AD%90%E6%80%A7%E9%97%AE%E9%A2%98/index.html">
+<meta property="og:site_name" content="n!Ck playground">
+<meta property="og:description" content="并发场景下如何保证正确性并发读取一个数据不需要额外考虑,因为本身读操作之间是共享的 并发写一个数据则需要考虑互斥问题,同一时间对于同一个数据来说只能有一个线程进行写操作,其他线程都必须等待; 不然就会导致严重的并发问题  例如这个例子,线程 A 和线程 B 同时更新一个库存值,由于并没有任何额外的并发控制,导致最终的数据表现和预期不一致 这是由于线程对库存的可以拆分为 3 个子步骤:  获取当前的">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://n1ck.cyou/img/redis.png">
+<meta property="article:published_time" content="2022-11-13T08:56:37.000Z">
+<meta property="article:modified_time" content="2022-11-13T12:43:19.134Z">
+<meta property="article:author" content="n!Ck">
+<meta property="article:tag" content="redis">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://n1ck.cyou/img/redis.png">
+  
+  
+  
+  <title>(十三)redis 原子性问题 - n!Ck playground</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"n1ck.cyou","root":"/","version":"1.9.3","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 60vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>n!Ck playground</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                Home
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                Archives
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                Categories
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                Tags
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                About
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/page.jpeg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="(十三)redis 原子性问题"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-11-13 16:56" pubdate>
+          November 13, 2022 pm
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          3.1k words
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          26 mins
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">(十三)redis 原子性问题</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h3 id="并发场景下如何保证正确性"><a href="#并发场景下如何保证正确性" class="headerlink" title="并发场景下如何保证正确性"></a>并发场景下如何保证正确性</h3><p>并发读取一个数据不需要额外考虑,因为本身读操作之间是共享的</p>
+<p>并发写一个数据则需要考虑互斥问题,同一时间对于同一个数据来说只能有一个线程进行写操作,其他线程都必须等待; 不然就会导致严重的并发问题</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h83sa17v4wj30iu0bo400.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
+<p>例如这个例子,线程 A 和线程 B 同时更新一个库存值,由于并没有任何额外的并发控制,导致最终的数据表现和预期不一致</p>
+<p>这是由于线程对库存的可以拆分为 3 个子步骤:</p>
+<ol>
+<li>获取当前的库存值</li>
+<li>当前库存值-1</li>
+<li>将最新的库存值写入缓存</li>
+</ol>
+<p>而这 3 个子步骤之间并没有通过任何方式进行并发控制,导致多个线程同时操作,最后出现数据不一致的问题</p>
+<p>最简单的解决并发安全问题的手段有两个</p>
+<ol>
+<li>加锁使之串行化</li>
+<li>使用原子操作</li>
+</ol>
+<h4 id="加锁"><a href="#加锁" class="headerlink" title="加锁"></a>加锁</h4><p>加锁是解决并发问题的最简单最直接的方式,但是加锁和释放锁会明显的导致系统并发性下降,同时这两个过程也会增大请求的响应耗时</p>
+<p>如果是分布式服务,还必须引入分布式锁,这也会加大系统的复杂程度</p>
+<h3 id="redis-提供的原子操作"><a href="#redis-提供的原子操作" class="headerlink" title="redis 提供的原子操作"></a>redis 提供的原子操作</h3><p>为了实现并发操作临界区资源,redis 提供了两种方式保证指令的原子性</p>
+<ol>
+<li>将多条指令通过一个 <code>Lua</code> 脚本的方式提交给 redis 执行</li>
+<li>将多条指令合并为 1 条指令执行</li>
+</ol>
+<h4 id="redis-的单指令操作"><a href="#redis-的单指令操作" class="headerlink" title="redis 的单指令操作"></a>redis 的单指令操作</h4><p>因为 redis 的核心线程只有一个,所以当主线程执行一条指令的时候,就无法执行其他指令; 有这个特性就能够保证 redis 在执行单指令的时候一定是一个原子操作</p>
+<p>对于数据的加减,有原子增和原子减,即 <code>INCR/DECR</code> ,多个线程并发执行原子增&#x2F;减指令,其最终效果与串行化执行表现一致</p>
+<p>还例如使用 redis 作为分布式锁时,通常需要在加锁前先判断锁是否可获取</p>
+<figure class="highlight pgsql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs pgsql"><span class="hljs-keyword">get</span> <span class="hljs-keyword">lock</span><br><span class="hljs-keyword">if</span> (got) &#123;<br>    <span class="hljs-keyword">set</span> <span class="hljs-keyword">lock</span><br>&#125;<br>// <span class="hljs-keyword">do</span> something <span class="hljs-keyword">with</span> <span class="hljs-keyword">lock</span><br>del <span class="hljs-keyword">lock</span><br></code></pre></td></tr></table></figure>
+
+<p>可以看在一次分布式锁的获取过程当中,先判断,在加锁是两个步骤,如果直接提交的话是无法保证原子性的</p>
+<p>redis 提供了 <code>set if not exist</code> 类似的单指令操作,用于实现最简单的分布式锁</p>
+<h4 id="redis-Lua-脚本"><a href="#redis-Lua-脚本" class="headerlink" title="redis Lua 脚本"></a>redis Lua 脚本</h4><p>如果一个业务无法使用 redis 提供的单指令完成,又要保证其原子性,就必须使用 <code>Lua</code> 脚本</p>
+<p>将多条指令放入一个 <code>Lua</code> 脚本里面提交给 redis 执行,redis 会把 <code>Lua</code> 脚本当做一个整体去执行,在这个执行过程当中不会被其他指令打断,从而保证了 <code>Lua</code> 脚本的原子性</p>
+<h3 id="redis-如何实现分布式锁"><a href="#redis-如何实现分布式锁" class="headerlink" title="redis 如何实现分布式锁"></a>redis 如何实现分布式锁</h3><p>前面说到,想要保证并发安全问题,除了原子操作以外,还有个最简单解决并发问题的方案,那就是加锁使命令串行化</p>
+<p>对于一个分布式系统来说,锁都必须要求是所有其他系统都能访问到的,而不是只属于某个服务的 <strong>本地锁</strong>; 这要求锁必须保存到一个能够被多个客户端共享访问的系统上,redis 正好就是一个共享存储的系统,所以可以使用 redis 来实现分布式锁</p>
+<h4 id="单节点-redis-实现分布式锁"><a href="#单节点-redis-实现分布式锁" class="headerlink" title="单节点 redis 实现分布式锁"></a>单节点 redis 实现分布式锁</h4><p>最简单的 redis 锁实现就是通过一个变量,来判断这个变量值来决定是上锁还是没有上锁; 例如约定 <code>锁变量 == 1</code> 表示已上锁,而 <code>锁变量 == 0</code> 表示没有上锁</p>
+<p>由于是单节点 redis,而且 redis 的核心线程也只有 1 个,即使线程 A 和 C 同时发出加锁请求,redis 也只能串行化处理; 所以同一时间内最多只能有 1 个线程能够持有锁</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h83sa6z51vj30hx0e0q5i.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
+<p>释放锁的过程也很简单,就是把对应锁变量的值修改为 <code>0</code>, 这样其他线程就能继续持有和释放这同一把锁</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h83sacwjkyj30gt0d6jt1.jpg" srcset="/img/loading.gif" lazyload alt="img_2.png"></p>
+<p>简单分析可以发现,上锁的过程包含好几个步骤:</p>
+<ol>
+<li>获取锁变量的值</li>
+<li>判断锁变量值是否等于 <code>0</code></li>
+<li>如果等于 <code>0</code> 则设置锁变量的值为 <code>1</code> 表示当前线程已经持有这把锁</li>
+<li>如果等于 <code>1</code> 则上锁失败,继续等待下一次请求上锁</li>
+</ol>
+<p>而这些步骤再实际执行时,因为可能存在并发安全的问题,所以必须保证原子性</p>
+<p>redis 对于分布式锁的实现,提供了一条单指令 <code>SETNX</code> 其效果等于 <code>SET key value IF NOT EXIST</code>: 如果 <code>key</code> 不存在的话就设置对应的键值对数据; 如果 <code>key</code> 已经存在,则不做任何操作</p>
+<p>这里的锁变量不再是某个变量值是否为 <code>0</code> 或者 <code>1</code> ,而是直接判断某个变量存在与否; 当不再需要锁是,直接 <code>DEL key</code> 删掉变量即可</p>
+<h4 id="SETNX-指令实现的分布式锁的潜在风险"><a href="#SETNX-指令实现的分布式锁的潜在风险" class="headerlink" title="SETNX 指令实现的分布式锁的潜在风险"></a>SETNX 指令实现的分布式锁的潜在风险</h4><p>上述方案并不是完美的分布式锁实现, 单单只用一条 <code>SETNX</code> 指令还存在其他风险</p>
+<ol>
+<li>如果某个线程上锁成功,但是在释放锁之前异常挂掉了,此时这个变量值将会一直存在下去无法被释放; 这会导致其他线程再也无法获取到锁,从而阻塞整个服务的运行</li>
+</ol>
+<p>针对这个问题最简单的办法,就是 <code>给分布式锁添加上一个自动过期时间</code></p>
+<p>这样一来,即使某个线程持有锁之后异常挂掉了,在经过一段时间后,锁也会自动释放; 不会完全阻塞其他线程</p>
+<ol start="2">
+<li>如果某个线程上锁成功,但是其他线程执行了 <code>DEL key</code> 指令,这会导致线程的锁被其他线程误释放掉</li>
+</ol>
+<p>此时如果有其他线程申请到了锁,这样就会和第一个线程同时操作临界区资源,最后可能导致严重的数据不一致问题</p>
+<p>针对锁被其他线程 <strong>误</strong> 释放的问题,可以在加锁的时候,带上一个唯一标识以区分不同的加锁请求</p>
+<p>上述加锁方案仅仅通过 <code>0</code> 或者 <code>1</code>,或者单纯的判断变量是否存在, 这是无法区分出不同的加锁请求的; 这就要求在加锁的时候,在锁变量上带上自己的唯一标识</p>
+<p>这个唯一标识的取值并不固定,线程 id,客户端 id 这种有唯一性约束的都可以</p>
+<p>最后上锁指令变为 <code>SETNX key unique_id EX 10</code> 其中 <code>EX 或者 PX</code> 表示带上超时时间单位分别是 <code>秒</code> 或者 <code>毫秒</code></p>
+<p>这样在释放锁的时候,就不再是简单的 <code>DEL key</code> 了,而是先获取锁变量的值,判断其 <code>value</code> 是否等于自己的唯一性标识,如果是才删除,否则说明是别人加的锁自己不能删除</p>
+<p>这导致释放锁的操作变为多个步骤,还必须通过 <code>Lua</code> 脚本保证释放锁也是一个原子性操作</p>
+<ol start="3">
+<li>锁过期问题</li>
+</ol>
+<p>在经历了上面两个优化之后,还存在另一个问题,那就是如果持有锁的线程在处理业务的时候耗时过长,超过了上锁时设置的自动过期时间; 这也会导致锁被提前释放,可能引起并发安全问题</p>
+<p>这里 redis 原生没有提供对应的解决方案,需要通过其他额外的三方提供类似于 <code>自动续期</code> 的功能</p>
+<ol start="4">
+<li>单机节点宕机</li>
+</ol>
+<p>由于 redis 是单节点部署,如果说 redis 发生了宕机,此时整个系统的锁就无法正常提供服务,整个业务相当于不可用</p>
+<p>最终,还是需要依靠集群部署的 redis 提供分布式锁,才能有效解决上面提到的所有问题</p>
+<h4 id="redis-分布式锁"><a href="#redis-分布式锁" class="headerlink" title="redis 分布式锁"></a>redis 分布式锁</h4><p>想要实现系统的高可用,单节点明显是不可能的; 一旦引入了分布式,整个系统的复杂度也就远比单机系统更为复杂; 在分布式锁的设计上,就需要按照一定的步骤和规范进行加解锁操作; 否则将会导致非预期的表现</p>
+<p>redis 官方提供了基于集群部署下的分布式锁实现 <code>RedLock 红锁</code>; 简单来说,就是采用 <code>过半机制</code>,即加锁和释放锁的标志为 <code>在半数以上的节点上操作成功</code></p>
+<p>这样分布式锁就保存在多个主节点上,即使有主节点发生宕机,其他主节点仍然能够维护这些分布式锁</p>
+<p>红锁的主要实现过程如下,假设整个 redis 集群当中有 <code>N</code> 个节点:</p>
+<ol>
+<li>客户端获取当前时间 <code>now</code></li>
+<li>客户端 <code>依次</code> 向 <code>N</code> 个节点发送加锁请求</li>
+</ol>
+<ul>
+<li>加锁的过程与单节点几乎一致,即 <code>SETNX key unique_id EX expire</code></li>
+<li>如果在对某个节点请求加锁的过程发生了超时,就继续向下一个节点发起加锁请求; 这里加锁时的超时时间远小于整个锁的超时时间,保证如果能拿到锁,也不至于立马就过期被释放掉</li>
+</ul>
+<ol start="3">
+<li>一旦客户端请求完 <code>N</code> 个节点后,就需要计算整个加锁过程的 <code>总耗时 cost</code></li>
+</ol>
+<p>只有在满足下面两个条件时,才认为最终加锁成功</p>
+<ol>
+<li>加锁成功的节点个数过半 <code>即 &gt;= N/2 + 1</code></li>
+<li>总耗时小于锁的超时时间,即 <code>cost &lt; expire</code>,最终锁的有效时间为 <code>expire - cost</code></li>
+</ol>
+<p><strong>需要注意的是,如果一个客户端最终加锁失败,那么它必须立即向所有节点发送解锁请求</strong></p>
+<p>使用了 <code>Redlock</code> 之后,只要保证集群当中有半数以上的实例正常工作,就能保证分布式锁的正常工作</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/redis/" class="category-chain-item">redis</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/redis/">#redis</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>(十三)redis 原子性问题</div>
+      <div>https://n1ck.cyou/2022/11/13/(十三)redis 原子性问题/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>Author</div>
+          <div>n!Ck</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>Posted on</div>
+          <div>November 13, 2022</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>Licensed under</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - Attribution">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/11/13/(%E5%8D%81%E4%BA%8C)redis%20%E7%BC%93%E5%AD%98%E9%97%AE%E9%A2%98/" title="(十二)redis 缓存问题">
+                        <span class="hidden-mobile">(十二)redis 缓存问题</span>
+                        <span class="visible-mobile">Next</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;Table of Contents</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Search</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">Keyword</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">Blog works best with JavaScript enabled</div>
+  </noscript>
+</body>
+</html>
