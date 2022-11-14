@@ -4,6 +4,31 @@
   
   
   <entry>
+    <title>(十五)redis 脑裂</title>
+    <link href="/2022/11/14/(%E5%8D%81%E4%BA%94)redis%20%E8%84%91%E8%A3%82/"/>
+    <url>/2022/11/14/(%E5%8D%81%E4%BA%94)redis%20%E8%84%91%E8%A3%82/</url>
+    
+    <content type="html"><![CDATA[<h3 id="什么是脑裂"><a href="#什么是脑裂" class="headerlink" title="什么是脑裂"></a>什么是脑裂</h3><p>当一个集群内部同时存在两个或者两个以上的主节点,这两个节点都能进行请求的读写,这种现象称为 <code>脑裂</code> 它看起来就是一个人拥有了两个大脑</p><h3 id="最可能导致脑裂的原因"><a href="#最可能导致脑裂的原因" class="headerlink" title="最可能导致脑裂的原因"></a>最可能导致脑裂的原因</h3><p>在哨兵模式下,如果主节点在一段时间内无法响应哨兵的心跳包,此时哨兵判定主节点 <code>客观下线</code> 后随机启动主从切换过程</p><p>如果在这个过程当中原来的主节点恢复正常,此时由于主从切换还未完成,仍然有新的请求进入原来的主节点处理</p><p>此时的集群看起来就有两个主节点</p><h3 id="数据丢失后如何判断是不是因为脑裂引起"><a href="#数据丢失后如何判断是不是因为脑裂引起" class="headerlink" title="数据丢失后如何判断是不是因为脑裂引起"></a>数据丢失后如何判断是不是因为脑裂引起</h3><ol><li>判断主从同步的延迟</li></ol><p><code>replication backlog</code> 里面获取主库的 <code>master_repl_offer</code> 和从库的 <code>slave_repl_offset</code> 检查这两个值是否相等; 如果说主从同步之间存在一定的延迟,则数据丢失可能是主从同步时,异常宕机引起的</p><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h851p3udiyj30hd0e075l.jpg" alt="img.png"></p><p>如果说主从同步的进度是相等的,则数据丢失可能是由于脑裂导致,过程如下</p><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h851p8ekgvj30hj0d10uw.jpg" alt="img_1.png"></p><p>更严重的是当主从切换完成后,哨兵会对之前的老主节点发出 <code>slaveof</code> 指令,令其变为从节点与新的主节点进行同步</p><p>在主从切换后进行首次全量同步,会清空从节点本地数据库的所有数据,相当于老的主节点在 <code>脑裂</code> 期间所接受的写请求数据将会全丢失; 最终导致严重的数据丢失问题</p><h3 id="如何避免脑裂问题"><a href="#如何避免脑裂问题" class="headerlink" title="如何避免脑裂问题"></a>如何避免脑裂问题</h3><p>redis 提供了两个关键参数,控制一个主节点能否继续接受新的请求</p><ol><li><code>min-slaves-to-write</code>: 一个主节点至少要有 <code>N</code> 个从节点与之进行通行时,主节点才能接受客户端的读写请求</li><li><code>min-slaves-max-log</code>: 主从节点同步时,最长不得超过 <code>N</code> 秒的延迟</li></ol><p>一旦一个主节点不满足上述的任何一点,此时 redis 就拒绝主节点接受客户端的请求</p>]]></content>
+    
+    
+    <categories>
+      
+      <category>redis</category>
+      
+    </categories>
+    
+    
+    <tags>
+      
+      <tag>redis</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
+  <entry>
     <title>(十四)redis 事务</title>
     <link href="/2022/11/13/(%E5%8D%81%E5%9B%9B)redis%20%E4%BA%8B%E5%8A%A1/"/>
     <url>/2022/11/13/(%E5%8D%81%E5%9B%9B)redis%20%E4%BA%8B%E5%8A%A1/</url>

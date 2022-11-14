@@ -221,6 +221,73 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2022/11/14/(%E5%8D%81%E4%BA%94)redis%20%E8%84%91%E8%A3%82/" target="_self">
+          <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(十五)redis 脑裂">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2022/11/14/(%E5%8D%81%E4%BA%94)redis%20%E8%84%91%E8%A3%82/" target="_self">
+          (十五)redis 脑裂
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt " href="/2022/11/14/(%E5%8D%81%E4%BA%94)redis%20%E8%84%91%E8%A3%82/" target="_self">
+        <div>
+          什么是脑裂当一个集群内部同时存在两个或者两个以上的主节点,这两个节点都能进行请求的读写,这种现象称为 脑裂 它看起来就是一个人拥有了两个大脑 最可能导致脑裂的原因在哨兵模式下,如果主节点在一段时间内无法响应哨兵的心跳包,此时哨兵判定主节点 客观下线 后随机启动主从切换过程 如果在这个过程当中原来的主节点恢复正常,此时由于主从切换还未完成,仍然有新的请求进入原来的主节点处理 此时的集群看起来就有两个
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-11-14 09:19" pubdate>
+              2022-11-14
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/redis/" class="category-chain-item">redis</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/redis/">#redis</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+      <div class="col-12 col-md-4 m-auto index-img">
         <a href="/2022/11/13/(%E5%8D%81%E5%9B%9B)redis%20%E4%BA%8B%E5%8A%A1/" target="_self">
           <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(十四)redis 事务">
         </a>
@@ -782,73 +849,6 @@
           <div class="post-meta mr-3">
             <i class="iconfont icon-date"></i>
             <time datetime="2022-11-11 20:46" pubdate>
-              2022-11-11
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3 d-flex align-items-center">
-            <i class="iconfont icon-category"></i>
-            
-
-<span class="category-chains">
-  
-  
-    
-      <span class="category-chain">
-        
-  <a href="/categories/redis/" class="category-chain-item">redis</a>
-  
-  
-
-      </span>
-    
-  
-</span>
-
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/redis/">#redis</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-      <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/11/(%E4%BA%94)redis%20%E5%93%A8%E5%85%B5%E6%A8%A1%E5%BC%8F/" target="_self">
-          <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(四)redis 哨兵模式">
-        </a>
-      </div>
-    
-    <article class="col-12 col-md-8 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2022/11/11/(%E4%BA%94)redis%20%E5%93%A8%E5%85%B5%E6%A8%A1%E5%BC%8F/" target="_self">
-          (四)redis 哨兵模式
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt " href="/2022/11/11/(%E4%BA%94)redis%20%E5%93%A8%E5%85%B5%E6%A8%A1%E5%BC%8F/" target="_self">
-        <div>
-          读写分离场景下主库宕机怎么办读写分离场景下,只有主库才能提供写服务; 如果主库发生故障宕机,此时所有的写请求将不可用,而且从库的主从同步也会断开导致读请求可能产生数据不一致问题  此时需要将一个从库提升为新的主库来提供写服务,其他从库继续从这个新的主库上进行主从同步; 这个过程涉及到 3 个问题  主库是否真的挂了 选哪个从库作为主库 怎么把新主库的信息告知给其他从库和客户端  redis 提供了
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2022-11-11 09:12" pubdate>
               2022-11-11
             </time>
           </div>
