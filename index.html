@@ -221,6 +221,73 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2022/11/13/(%E5%8D%81%E5%9B%9B)redis%20%E4%BA%8B%E5%8A%A1/" target="_self">
+          <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(十四)redis 事务">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2022/11/13/(%E5%8D%81%E5%9B%9B)redis%20%E4%BA%8B%E5%8A%A1/" target="_self">
+          (十四)redis 事务
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt " href="/2022/11/13/(%E5%8D%81%E5%9B%9B)redis%20%E4%BA%8B%E5%8A%A1/" target="_self">
+        <div>
+          redis 如何保证事务的四大特性redis 的事务实现redis 本身提供了较为简单的事务支持,主要涉及到 2 个指令,完成 3 个步骤  客户端发送 MULTI 指令显示声明开启一个事务 客户端随后将事务的指令发送给 redis,redis 在收到这些指令后不会立即执行,而是放入一个暂存队列里面等待最后一个事务提交的指令 客户端发送 EXEC 指令声明提交当前事务,redis 在收到 EXEC
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-11-13 20:43" pubdate>
+              2022-11-13
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/redis/" class="category-chain-item">redis</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/redis/">#redis</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+      <div class="col-12 col-md-4 m-auto index-img">
         <a href="/2022/11/13/(%E5%8D%81%E4%B8%89)redis%20%E5%8E%9F%E5%AD%90%E6%80%A7%E9%97%AE%E9%A2%98/" target="_self">
           <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(十三)redis 原子性问题">
         </a>
@@ -782,73 +849,6 @@
           <div class="post-meta mr-3">
             <i class="iconfont icon-date"></i>
             <time datetime="2022-11-11 09:12" pubdate>
-              2022-11-11
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3 d-flex align-items-center">
-            <i class="iconfont icon-category"></i>
-            
-
-<span class="category-chains">
-  
-  
-    
-      <span class="category-chain">
-        
-  <a href="/categories/redis/" class="category-chain-item">redis</a>
-  
-  
-
-      </span>
-    
-  
-</span>
-
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/redis/">#redis</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-      <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/11/(%E5%9B%9B)redis%20%E4%B8%BB%E4%BB%8E%E5%90%8C%E6%AD%A5/" target="_self">
-          <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(四)redis 主从同步">
-        </a>
-      </div>
-    
-    <article class="col-12 col-md-8 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2022/11/11/(%E5%9B%9B)redis%20%E4%B8%BB%E4%BB%8E%E5%90%8C%E6%AD%A5/" target="_self">
-          (四)redis 主从同步
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt " href="/2022/11/11/(%E5%9B%9B)redis%20%E4%B8%BB%E4%BB%8E%E5%90%8C%E6%AD%A5/" target="_self">
-        <div>
-          redis 如何保证高可用对于 redis 来说高可用有两层含义  异常宕机时数据尽量不丢失 服务尽量少中断  对于第 1 点来说,redis 通过 AOF 和 RDB 两种不同的持久化方式来保证数据尽量不丢失 对于第 2 点来说,如果一个节点挂掉了,想要中断服务的时间尽可能短,最简单的办法就是部署多台实例; 这样某个节点挂掉之后还能有其他节点继续对外提供服务 对于第 2 点,如何保证每个节点之间
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2022-11-11 08:04" pubdate>
               2022-11-11
             </time>
           </div>

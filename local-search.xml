@@ -4,6 +4,31 @@
   
   
   <entry>
+    <title>(十四)redis 事务</title>
+    <link href="/2022/11/13/(%E5%8D%81%E5%9B%9B)redis%20%E4%BA%8B%E5%8A%A1/"/>
+    <url>/2022/11/13/(%E5%8D%81%E5%9B%9B)redis%20%E4%BA%8B%E5%8A%A1/</url>
+    
+    <content type="html"><![CDATA[<h2 id="redis-如何保证事务的四大特性"><a href="#redis-如何保证事务的四大特性" class="headerlink" title="redis 如何保证事务的四大特性"></a>redis 如何保证事务的四大特性</h2><h3 id="redis-的事务实现"><a href="#redis-的事务实现" class="headerlink" title="redis 的事务实现"></a>redis 的事务实现</h3><p>redis 本身提供了较为简单的事务支持,主要涉及到 2 个指令,完成 3 个步骤</p><ol><li>客户端发送 <code>MULTI</code> 指令显示声明开启一个事务</li><li>客户端随后将事务的指令发送给 redis,redis 在收到这些指令后不会立即执行,而是放入一个暂存队列里面等待最后一个事务提交的指令</li><li>客户端发送 <code>EXEC</code> 指令声明提交当前事务,redis 在收到 <code>EXEC</code> 之后会依次从暂存队列里面取出中间收到的指令并执行</li></ol><p>由于 redis 对事物的支持比较简单,主要关注下对于事务的四大特征 <code>ACID</code> redis 与 msyql 都有哪些不同</p><h4 id="A-原子性"><a href="#A-原子性" class="headerlink" title="A 原子性"></a>A 原子性</h4><p>分三种情况分析 redis 对原子性的支持</p><ol><li>在事务真正只执行前报错</li></ol><p>在客户端发送 <code>EXEC</code> 之前,如果客户端发送了 redis 不支持的指令,此时 redis 会报错并且记录下这个错误,此时事务里面的其他所有的指令都不会被执行,原子性得到保证</p><ol start="2"><li>在事务执行过程中报错</li></ol><p>有些指令能通过 redis 的语法检查,但是在运行时才会具体报错</p><p>例如对一个 <code>string</code> 字符串类型的 <code>key</code> 做 <code>LPOP</code> 操作,在没有真正执行命令之前,redis 是不知道 <code>LPOP</code> 指令后面操作的 <code>key</code> 的具体类型</p><p>所以这个错误只有在运行时才会发生,此时 redis 会继续执行剩下的语句</p><p>对于 mysql 来说,如果事务过程又发生错误,此时所有的已经执行的语句都会发生回滚,而 redis 是 <code>没有回滚</code> 的会继续把剩下的正确语句执行完成</p><p>在这种情况下,redis 无法保证事务的原子性</p><ol start="3"><li>在执行时发生宕机</li></ol><p>如果 redis 有打开 <code>AOF</code> 日志进行持久化,在宕机后数据恢复时,可以通过工具检测 <code>AOF</code> 日志里面记录的事务是否完整</p><p>因为 <code>AOF</code> 日志是每执行一条指令后写入(写后日志),如果 <code>AOF</code> 日志记录有 <code>MULT</code> 开启事务,但是并没有 <code>EXEC</code> 提交事务,此时恢复工具会清理 <code>AOF</code> 里面这些不完整的事务记录</p><p>这样在使用 <code>AOF</code> 日志做数据恢复时,就不会执行这些未提交的事务指令了,此时事务的原子性能够得到保证</p><p>总结如下:</p><ol><li>命令入队时,语法检查报错,整个事务不会执行,事务的原子性能够得到保证</li><li>提交事务后,执行事务语句时报错,跳过报错的语句,继续执行剩下正确的语句,事务的原子性无法得到保证</li><li>执行事务时,发生宕机,如果有开启 <code>AOF</code> 日志,则能够保证事务的原子性; 如果没有开启 <code>AOF</code> ,则无法保证事务的原子性</li></ol><h4 id="C-一致性"><a href="#C-一致性" class="headerlink" title="C 一致性"></a>C 一致性</h4><p>对于上述三种情况,依旧可以分析一致性问题</p><ol><li>命令入队时报错,此时没有任何语句被执行,能够保证数据库的一致性</li><li>提交事务后,错误的命令不会执行,正确的命令可以执行,此时数据库的一致性没有被破坏</li></ol><p>需要注意的,这里的一致性,宏观层面上说的是,数据库能够从一个正确的状态转移到另一个正确的状态,这叫做数据库的一致性</p><p>对于这种情况,错误的状态并没有发生,而正确的指令也能够得到执行,对于数据库来说,能够得到正确的结果 <code>(即使在业务看来是错误的结果,但 redis 数据执行并没有报错)</code> ,所以对于 redis 数据库来说,一致性是没有受到破坏的</p><ol start="3"><li>执行事务时发生宕机<ul><li>如果没有开启 <code>AOF</code> 或者 <code>RDB</code> 则执行一半的事务在宕机后就全部丢失了,重启恢复数据时自然也没有,数据库的一致性没有受到破坏</li><li>如果开启了 <code>RDB</code> 快照,但是 <code>RDB</code> 快照在事务执行时不会记录,所以使用 <code>RDB</code> 快照做数据恢复时,也没有事务的记录,数据库的一致性没有受到破坏</li><li>如果开启了 <code>AOF</code> 日志,在做数据恢复时,恢复工具能够检测 <code>AOF</code> 日志当中未执行完的事务语句并且清除掉,数据库的一致性也没有受到破坏</li></ul></li></ol><h4 id="I-隔离性"><a href="#I-隔离性" class="headerlink" title="I 隔离性"></a>I 隔离性</h4><ol><li>在事务之前使用 <code>watch</code> 机制保证事务的隔离性</li></ol><p>如果一个事务还没有提交 <code>EXEC</code> 语句,此时并没有得到真正的执行,而是所有指令都处于就绪队列里面; 如果此时还存在其他并发操作,就需要依赖 <code>watch</code> 机制保证事务的隔离性不被破坏</p><p><code>watch</code> 机制的作用是在事务执行前,监控一个或者多个变量是否发生改变; 当真正提交 <code>EXEC</code> 指令时, <code>watch</code> 机制会检查事务修改的变量是否和事务提交前发生了变化</p><p>如果被其他事务修改了,那么就放弃当前事务的执行,避免事务的隔离性发生破坏 <code>(没有类似于 mysql 的快照读)</code>; 如果没有发生改变,则可以继续执行事务</p><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h84curi2fsj30i30bgq5y.jpg" alt="img.png"></p><p>如果事务没有使用 <code>watch</code> 机制,那么事务的隔离性可能受到破坏</p><p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h84cuy1i6wj30ht09nacd.jpg" alt="img_1.png"></p><ol start="2"><li>在事务提交后,因为 redis 是单主线程,隔离性能够得到保证</li></ol><p>这个很简单了,因为 redis 单主线程的缘故,一旦事务开始执行后,其他指令只得乖乖等待主线程完成事务之后才能处理; 所以事务的隔离性在这种情况下不会被破坏</p><h4 id="D-持久性"><a href="#D-持久性" class="headerlink" title="D 持久性"></a>D 持久性</h4><ol><li>即使开启了 <code>AOF</code> 日志或者 <code>RDB</code> 快照,由于刷盘机制的问题,都存在宕机后部分数据丢失的情况</li><li>如果没有开启持久化操作</li></ol><p>无论采用什么持久化方式,这两种情况数据库的持久性都没有得到保证</p>]]></content>
+    
+    
+    <categories>
+      
+      <category>redis</category>
+      
+    </categories>
+    
+    
+    <tags>
+      
+      <tag>redis</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
+  <entry>
     <title>(十三)redis 原子性问题</title>
     <link href="/2022/11/13/(%E5%8D%81%E4%B8%89)redis%20%E5%8E%9F%E5%AD%90%E6%80%A7%E9%97%AE%E9%A2%98/"/>
     <url>/2022/11/13/(%E5%8D%81%E4%B8%89)redis%20%E5%8E%9F%E5%AD%90%E6%80%A7%E9%97%AE%E9%A2%98/</url>
