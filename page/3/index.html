@@ -221,6 +221,73 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2022/11/06/mysql/(%E5%8D%81%E4%BA%8C)mysql%20%E6%97%A5%E5%BF%97%E5%86%99%E5%85%A5%E6%97%B6%E6%9C%BA/" target="_self">
+          <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(十二)mysql 日志写入时机">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2022/11/06/mysql/(%E5%8D%81%E4%BA%8C)mysql%20%E6%97%A5%E5%BF%97%E5%86%99%E5%85%A5%E6%97%B6%E6%9C%BA/" target="_self">
+          (十二)mysql 日志写入时机
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt " href="/2022/11/06/mysql/(%E5%8D%81%E4%BA%8C)mysql%20%E6%97%A5%E5%BF%97%E5%86%99%E5%85%A5%E6%97%B6%E6%9C%BA/" target="_self">
+        <div>
+          binlogmysql 操作日志的步骤当中,几乎都有为日志文件添加对应的缓存,由此可见 mysql 最大程度上在利用缓存来平衡内存和磁盘间写入速率的差距 同样的 binlog 也有自己的 binlog buffer, mysql 为每个事务都分配了对应的 binlog buffer 当事务执行时,都是先写入 binlog buffer, 当事务提交的时候才把 binlog buffer 写入 bi
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-11-06 16:41" pubdate>
+              2022-11-06
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/mysql/" class="category-chain-item">mysql</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/mysql/">#mysql</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+      <div class="col-12 col-md-4 m-auto index-img">
         <a href="/2022/11/06/mysql/(%E5%8D%81%E4%B8%80)mysql%20%E5%B9%BB%E8%AF%BB%E5%92%8C%20next-key%20lock/" target="_self">
           <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(十一)mysql 幻读和 next-key lock">
         </a>
@@ -782,73 +849,6 @@
           <div class="post-meta mr-3">
             <i class="iconfont icon-date"></i>
             <time datetime="2022-11-03 22:31" pubdate>
-              2022-11-03
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3 d-flex align-items-center">
-            <i class="iconfont icon-category"></i>
-            
-
-<span class="category-chains">
-  
-  
-    
-      <span class="category-chain">
-        
-  <a href="/categories/mysql/" class="category-chain-item">mysql</a>
-  
-  
-
-      </span>
-    
-  
-</span>
-
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/mysql/">#mysql</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-      <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/03/mysql/(%E4%BA%8C)mysql%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E5%8E%9F%E7%90%86/" target="_self">
-          <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(二)mysql 事务隔离原理">
-        </a>
-      </div>
-    
-    <article class="col-12 col-md-8 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2022/11/03/mysql/(%E4%BA%8C)mysql%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E5%8E%9F%E7%90%86/" target="_self">
-          (二)mysql 事务隔离原理
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt " href="/2022/11/03/mysql/(%E4%BA%8C)mysql%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E5%8E%9F%E7%90%86/" target="_self">
-        <div>
-          数据库事务的四大特性 原子性:事务里一组操作要么全部成功,要么全部失败,不会出现一半成功一般失败的情况 持久性:事务一旦提交后,其变更就会永久保存下来,即使发生宕机也不会出现数据丢失的情况 隔离性:不同的事务在并发提交时,其表现的结果看起来是串行化操作的结果 一致性:数据保证数据从一个正确的状态转移到另一个正确的状态  一致性难以理解:它为数据库提供了一种 约束 ,就是说每时每刻数据库都按照正确的
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2022-11-03 09:21" pubdate>
               2022-11-03
             </time>
           </div>
