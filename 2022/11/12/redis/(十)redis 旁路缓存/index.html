@@ -16,24 +16,24 @@
   <meta name="author" content="n!Ck">
   <meta name="keywords" content="">
   
-    <meta name="description" content="一主多从架构下的读写分离先回顾下一主多从的结构图  读写分离的主要目的就是为了 分摊主库上的请求压力 ,上面的架构主要是在 client 客户端主动做负载均衡; 在这种模式下,会把数据库的配置信息放到客户端的连接层,由客户端主动选择处理写请求和读请求的数据库实例 还有一种就是在客户端和数据库之间新增一个代理网关(正向代理:发送方不知道实际处理方是谁,只知道一个处理方代理),这样客户端就不用区分读写">
+    <meta name="description" content="将 redis 当做旁路缓存使用在业务客户端和数据库持久层中间,加上 redis,此时 redis 就以旁路缓存的身份提供服务 作为缓存使用的redis 有两种方式  只读缓存 读写缓存  只读缓存redis 只提供读请求,所有的写请求都直接打到数据库 对于删除操作,当删除数据库的记录后,还需要删除 redis 里面保存的记录,以免下次又从缓存里面读到了 对于读请求,如果没有命中 redis 缓存">
 <meta property="og:type" content="article">
-<meta property="og:title" content="(十六)mysql 读写分离">
-<meta property="og:url" content="https://n1ck.cyou/2022/11/08/mysql/(%E5%8D%81%E5%85%AD)mysql%20%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/index.html">
+<meta property="og:title" content="(十)redis 旁路缓存">
+<meta property="og:url" content="https://n1ck.cyou/2022/11/12/redis/(%E5%8D%81)redis%20%E6%97%81%E8%B7%AF%E7%BC%93%E5%AD%98/index.html">
 <meta property="og:site_name" content="n!Ck playground">
-<meta property="og:description" content="一主多从架构下的读写分离先回顾下一主多从的结构图  读写分离的主要目的就是为了 分摊主库上的请求压力 ,上面的架构主要是在 client 客户端主动做负载均衡; 在这种模式下,会把数据库的配置信息放到客户端的连接层,由客户端主动选择处理写请求和读请求的数据库实例 还有一种就是在客户端和数据库之间新增一个代理网关(正向代理:发送方不知道实际处理方是谁,只知道一个处理方代理),这样客户端就不用区分读写">
+<meta property="og:description" content="将 redis 当做旁路缓存使用在业务客户端和数据库持久层中间,加上 redis,此时 redis 就以旁路缓存的身份提供服务 作为缓存使用的redis 有两种方式  只读缓存 读写缓存  只读缓存redis 只提供读请求,所有的写请求都直接打到数据库 对于删除操作,当删除数据库的记录后,还需要删除 redis 里面保存的记录,以免下次又从缓存里面读到了 对于读请求,如果没有命中 redis 缓存">
 <meta property="og:locale" content="en_US">
-<meta property="og:image" content="https://n1ck.cyou/img/mysql.png">
-<meta property="article:published_time" content="2022-11-08T01:09:29.000Z">
-<meta property="article:modified_time" content="2022-11-09T01:15:35.011Z">
+<meta property="og:image" content="https://n1ck.cyou/img/redis.png">
+<meta property="article:published_time" content="2022-11-12T11:59:20.000Z">
+<meta property="article:modified_time" content="2022-11-12T12:19:01.464Z">
 <meta property="article:author" content="n!Ck">
-<meta property="article:tag" content="mysql">
+<meta property="article:tag" content="redis">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://n1ck.cyou/img/mysql.png">
+<meta name="twitter:image" content="https://n1ck.cyou/img/redis.png">
   
   
   
-  <title>(十六)mysql 读写分离 - n!Ck playground</title>
+  <title>(十)redis 旁路缓存 - n!Ck playground</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -198,7 +198,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="(十六)mysql 读写分离"></span>
+            <span id="subtitle" data-typed-text="(十)redis 旁路缓存"></span>
           
         </div>
 
@@ -209,8 +209,8 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2022-11-08 09:09" pubdate>
-          November 8, 2022 am
+        <time datetime="2022-11-12 19:59" pubdate>
+          November 12, 2022 pm
         </time>
       </span>
     
@@ -221,7 +221,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          2.8k words
+          724 words
         
       </span>
     
@@ -232,7 +232,7 @@
         
         
         
-          24 mins
+          7 mins
         
       </span>
     
@@ -270,103 +270,32 @@
         <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
-            <h1 style="display: none">(十六)mysql 读写分离</h1>
+            <h1 style="display: none">(十)redis 旁路缓存</h1>
             
             
               <div class="markdown-body">
                 
-                <h3 id="一主多从架构下的读写分离"><a href="#一主多从架构下的读写分离" class="headerlink" title="一主多从架构下的读写分离"></a>一主多从架构下的读写分离</h3><p>先回顾下一主多从的结构图</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7y196hmklj30j00cttan.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
-<p>读写分离的主要目的就是为了 <strong>分摊主库上的请求压力</strong> ,上面的架构主要是在 <code>client</code> 客户端主动做负载均衡; 在这种模式下,会把数据库的配置信息放到客户端的连接层,由客户端主动选择处理写请求和读请求的数据库实例</p>
-<p>还有一种就是在客户端和数据库之间新增一个代理网关(正向代理:发送方不知道实际处理方是谁,只知道一个处理方代理),这样客户端就不用区分读写请求,只需要把请求全部发送给代理即可; 具体的读写请求分发到主库还是从库全部由代理判断</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7y19d7bvhj30hb0dvq4f.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
-<p>无论是那种架构,都存在一个问题: <strong>由于存在主从延迟,客户端刚刚写入一条数据后马上发起查询请求,此时处理读请求的从库很可能还没来得及完成主从同步,导致数据不一致</strong></p>
-<p>读写分离解决数据不一致的方案主要有以下几种:</p>
+                <h3 id="将-redis-当做旁路缓存使用"><a href="#将-redis-当做旁路缓存使用" class="headerlink" title="将 redis 当做旁路缓存使用"></a>将 redis 当做旁路缓存使用</h3><p>在业务客户端和数据库持久层中间,加上 redis,此时 redis 就以旁路缓存的身份提供服务</p>
+<p>作为缓存使用的redis 有两种方式</p>
 <ol>
-<li>强制查主库</li>
-<li><code>sleep</code> 等待</li>
-<li>判断是否存在主从延迟</li>
-<li><code>semi-sync</code></li>
-<li>等待主库位点</li>
-<li>等待主库 <code>GTID</code></li>
+<li>只读缓存</li>
+<li>读写缓存</li>
 </ol>
-<h4 id="强制查主库"><a href="#强制查主库" class="headerlink" title="强制查主库"></a>强制查主库</h4><p>业务方将请求分为以下两类:</p>
+<h4 id="只读缓存"><a href="#只读缓存" class="headerlink" title="只读缓存"></a>只读缓存</h4><p>redis 只提供读请求,所有的写请求都直接打到数据库</p>
+<p>对于删除操作,当删除数据库的记录后,还需要删除 redis 里面保存的记录,以免下次又从缓存里面读到了</p>
+<p>对于读请求,如果没有命中 redis 缓存,则会直接访问数据库,并且回写到 redis 里面,以便下次直接从 redis 里获取数据</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h82lz1mtthj30j50acgnw.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
+<p>对于只读缓存来说,数据库能够提供数据的可靠性保证,不会有丢失数据的风险; 所以对于那些只读的数据例如图片,短视频等内容,可以考虑使用 redis 作为只读缓存</p>
+<h4 id="读写缓存"><a href="#读写缓存" class="headerlink" title="读写缓存"></a>读写缓存</h4><p>对于读写缓存来说,redis 不仅仅要处理读请求,现在还负责处理写请求,这样最新的数据都只会在 redis 里面保存; 如果发生异常宕机的话,这些新数据就会因为没有持久化到数据库里导致数据丢失</p>
+<p>对于读写缓存来说,有两种配置策略</p>
 <ol>
-<li>有强一致性要求的请求,强制把这部分读请求打到主库上,保证数据一致性</li>
-<li>接受一定时间内数据不一致的请求,把这部分读请求打到从库上,由主从同步保证一定时间内的最终一致性即可</li>
+<li>同步直写: 客户端将写请求发送给 redis 之后,也会发送给数据库进行处理; 等到缓存和数据库都返回处理成功后,才返回给业务端; 这样即使发生宕机,数据库里面也有最新的数据,提供了数据的可靠性保证</li>
 </ol>
-<p>考虑一种极端场景,所有的请求都有强一致性要求; 这样一主多从的读写分离结构就退化为只有一个主库的单节点结构; 失去了读写分离的意义</p>
-<h4 id="sleep-等待"><a href="#sleep-等待" class="headerlink" title="sleep 等待"></a>sleep 等待</h4><p>在主库完成写请求之后,下一个强一致性读请求到达业务方,在发送到从库之前先 <code>sleep(x)</code> 等待一段时间 <code>x</code></p>
-<p>假设当前的主从延迟在 <code>2s</code> 以内,这样 <code>sleep(2)</code> 之后就可以认为从库已经同步了刚刚最新的写请求,此时业务方再把读请求发送到从库上,有很大概率能拿到最新的数据</p>
-<p>这个方案仍然是不可靠的,假如主从延迟并不稳定在固定值之内</p>
-<ol>
-<li>如果主从延迟只有 <code>0.5s</code> 了,此时等待 <code>2s</code> 显然时间过长</li>
-<li>如果主从延迟超过了 <code>2s</code>, 即使有等待的时间,还是会读取到历史脏数据,导致数据不一致的问题</li>
+<p>同步直写的缺点就是: 由于 redis 和数据库处理数据的速度不同,很可能 redis 在短时间之内就返回了,而等待数据库处理完成后已经过去一段时间; 这无疑增大了请求的整体耗时</p>
+<ol start="3">
+<li>异步回写: 客户端将所有写请求都放到缓存里面处理; 等到这些数据即将从缓存里面被淘汰时,redis 将这些最新的数据写回数据库; 这样所有的读写请求都在 redis 处理,客户端可以在很短的时间的回复业务方的请求; 只不过一旦发生异常宕机,那些还没来得及写回数据库的数据就会有丢失的风险了</li>
 </ol>
-<h4 id="判断是否存在主从延迟"><a href="#判断是否存在主从延迟" class="headerlink" title="判断是否存在主从延迟"></a>判断是否存在主从延迟</h4><ol>
-<li>通过主从延迟时间判断是否存在主从延迟,每次查询前,先获取 <code>seconds_behind_master</code> 值,判断主从延迟的时间是否等于 0; 如果等于 0 就发起读请求,否则就等待主从延迟的时间变为 0 后才执行查询</li>
-<li>通过位点判断是否存在主从延迟,查询主库上的最新位点和从库上的最新位点,如果两个位点相同,则认为没有主从延迟可以执行查请求;否则就等待直到位点相同后才执行查询</li>
-<li>通过 <code>GTID</code> 判断是否存在主从延迟,查询主库的 <code>GTID</code> 集合与从库的 <code>GTID</code> 集合是否相同; 若相同则执行查询请求;否则就等待直到相同后才执行查询</li>
-</ol>
-<p>每次判断是否存在主从延迟,无论选用那种方式判断,也都还是会发生数据不一致的问题</p>
-<p>考虑如下场景,主库 A 已经写入 2 个事务到 <code>binlog</code> ,并且发送了前两个事务到从库 B 里面,且从库 <code>B</code> 也已经同步完成; 此时主库 A 上一个新事务 3 刚刚写入完成,还没来得及发送</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7y19iv59mj30bq0a6wfe.jpg" srcset="/img/loading.gif" lazyload alt="img_2.png"></p>
-<p>此时无论是位点还是 <code>GTID</code> 都会认为没有发生主从延迟,但严格上来说此时的读请求,在从库上仍然是查询不到事务 3 的</p>
-<h4 id="semi-sync-半同步"><a href="#semi-sync-半同步" class="headerlink" title="semi-sync 半同步"></a>semi-sync 半同步</h4><p><code>semi-sync</code> 半同步的设计如下:</p>
-<ol>
-<li>事务提交后,主库把 <code>binlog</code> 发送给从库</li>
-<li>从库收到 <code>binlog</code> 在消费 <code>relay log</code> 并完成从库 <code>binlog</code> 的写入后,会给主库发送一个 <code>ack</code> 表示完成当前事务的同步</li>
-<li>主库收到 <code>ack</code> 之后,才会返回给客户端表示当前事务已经完成</li>
-</ol>
-<p>也就是说 <code>semi-sync</code> 半同步机制保证了所有返回给客户端的事务请求,都是在从库上完成了同步的</p>
-<p>在一主多从结构下,<code>semi-sync</code> 也可能会犯错</p>
-<p>如果一个从库收到同步 <code>binlog</code> 的请求后,完成同步并向主库回复了 <code>ack</code>; 此时主库认为这个事务的同步已经完成,则向客户端回复成功; 假如针对这个事务数据的读请求进来,被代理分配到一个还没有完成同步的从库上,此时又产生了数据不一致的问题</p>
-<p>而且如果是基于位点或者 <code>GTID</code> 的半同步,如果主库压力很大其不停地在推进位点或者 <code>GTID</code> 而从库可能会一直在追赶主库的同步进度</p>
-<p>由于主从延迟加上 <code>semi-sync</code> 半同步机制,对于一个事务来说,从库迟迟不会向主库回复 <code>ack</code> ,从而主库不会向客户端回复成功; 导致整个业务阻塞</p>
-<p>对于一笔刚写入完成的事务,并不需要完全等待从库完成同步后,才回复 <code>ack</code> 可以看一下主从同步之间的中间状态</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7y19r2wa6j30oe0ixdk3.jpg" srcset="/img/loading.gif" lazyload alt="img_3.png"></p>
-<p>对于等待位点检测主从延迟的方案来说,上面的请求中,从库和主库的位点一直都不相同; 如果一个查询必须要等待同步完成才能响应的话,上面的步骤将会导致整个查询不可用</p>
-<p>其实当一个事务已经同步写入从库的 <code>binlog</code> 当中并完成刷盘,此时就可以认为这个事务的同步已经完成了; 至于其他事务导致的主从延迟,其实和当前已同步完成的事务无关</p>
-<p>总结,使用 <code>semi-sync</code> 且检测主从延迟的方案,存在两个问题</p>
-<ol>
-<li>一主多从,从某些还未来得及同步主库的从库查询时,可能查到没有更新的历史数据</li>
-<li>如果出从延迟持续存在,从库等延迟结束,主库等从库回复 <code>ack</code> ,这里可能导致长时间的等待</li>
-</ol>
-<h4 id="等待主库位点的操作"><a href="#等待主库位点的操作" class="headerlink" title="等待主库位点的操作"></a>等待主库位点的操作</h4><p>从库上有一条指令,可以用于主动检测与主库之间位点的差异</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> master_pos_wait(file, pos, timeout)<br></code></pre></td></tr></table></figure>
-
-<ol>
-<li><code>file</code> 指定了检测主库的 <code>binlog</code> 文件, <code>pos</code> 指定了检测事务的位置</li>
-<li><code>timeout</code> 制定这个函数检测时的超时时间</li>
-</ol>
-<p>这条命令的返回值如下:</p>
-<ol>
-<li>正常返回一个正整数 <code>M</code> 表示从命令开始执行,到同步 <code>file</code> 的 <code>pos</code> 位置时,执行了多少个事务</li>
-<li>如果主从同步发生异常,返回 NULL</li>
-<li>如果超时,返回 <code>-1</code></li>
-<li>如果开始执行的时候,就已经超过 <code>pos</code> 位置,返回 0</li>
-</ol>
-<p>对于上面 <code>semi-sync</code> 产生的问题,看看等待主库位点如何解决</p>
-<ol>
-<li>主库事务 <code>trx1</code> 执行完成之后,立马查询当前主库的 <code>binlog</code> 文件 <code>file</code> 和最新的位点 <code>pos</code></li>
-<li>随机选择一个从库进行查询</li>
-<li>从库查询前先执行上述语句,检测主从同步之间的位点差异</li>
-<li>如果返回值 <code>&gt;=0</code> 则表示当前从库对于主库刚刚执行的事务 <code>trx1</code> 已经执行过了,可以由从库返回读请求</li>
-<li>否则说明当前从库还未来得及同步刚刚主库的事务,此时读请求交给主库响应</li>
-</ol>
-<ul>
-<li><p>假设检测主从延迟的等待时长为 <code>1s</code> ,如果这 <code>1s</code> 内,返回了大于 0 的整数 <code>M</code> ,则说明在这 <code>1s</code> 内,从库从某个之前的位置同步到 <code>pos</code> 时,应用了 <code>M</code> 个事务; 虽然等待了一些时间,但是好歹追上了主从延迟,所以从库可以相应对应的读请求</p>
-</li>
-<li><p>如果返回值等于 0,则表示从库当前同步主库的位点已经领先于主库执行事务 <code>trx1</code> 时的位点,此时从库肯定也是完成了事务 <code>trx1</code> 的同步,可以响应读请求</p>
-</li>
-<li><p>如果返回值等于 <code>-1</code> 或者 <code>NULL</code> 则说明在等待时间内从库都没能追上主从延迟,此时记录的肯定是历史数据,必须交给主库响应当前查询请求</p>
-</li>
-</ul>
-<p>图例如下:</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7y19xa2l8j30mh0g5n2i.jpg" srcset="/img/loading.gif" lazyload alt="img_4.png"></p>
-<p>退化到主库查询是一种通用的兜底方案,因为读请求不可能无限等待从库去追赶主从延迟;超时后就必须要由主库响应请求</p>
-<h4 id="等待-GTID-的操作"><a href="#等待-GTID-的操作" class="headerlink" title="等待 GTID 的操作"></a>等待 GTID 的操作</h4><p>同理,从库通过主库发送过来的事务 <code>GTID</code> ,判断自己当前的 <code>GTID</code> 集合是否包含对应事务的 <code>GTID</code> </p>
-<p>同样,超时后结束等待; 或者在等待时事务的 <code>GTID</code> 加入当前集合; 或者在检测时当前集合就已经包含了 <code>GTID</code> </p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h82lz7158pj30is0a1abo.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
 
                 
               </div>
@@ -385,7 +314,7 @@
     
       <span class="category-chain">
         
-  <a href="/categories/mysql/" class="category-chain-item">mysql</a>
+  <a href="/categories/redis/" class="category-chain-item">redis</a>
   
   
 
@@ -400,7 +329,7 @@
     <div class="post-meta">
       <i class="iconfont icon-tags"></i>
       
-        <a href="/tags/mysql/">#mysql</a>
+        <a href="/tags/redis/">#redis</a>
       
     </div>
   
@@ -412,8 +341,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>(十六)mysql 读写分离</div>
-      <div>https://n1ck.cyou/2022/11/08/mysql/(十六)mysql 读写分离/</div>
+      <div>(十)redis 旁路缓存</div>
+      <div>https://n1ck.cyou/2022/11/12/redis/(十)redis 旁路缓存/</div>
     </div>
     <div class="license-meta">
       
@@ -425,7 +354,7 @@
       
         <div class="license-meta-item license-meta-date">
           <div>Posted on</div>
-          <div>November 8, 2022</div>
+          <div>November 12, 2022</div>
         </div>
       
       
@@ -457,9 +386,9 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2022/11/09/redis/(%E4%B8%80)redis%20%E5%BA%95%E5%B1%82%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/" title="(一)redis 底层数据结构">
+                      <a href="/2022/11/12/redis/(%E5%8D%81%E4%B8%80)redis%20%E7%BC%93%E5%AD%98%E6%B7%98%E6%B1%B0%E7%AD%96%E7%95%A5/" title="(十一)redis 缓存淘汰策略">
                         <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">(一)redis 底层数据结构</span>
+                        <span class="hidden-mobile">(十一)redis 缓存淘汰策略</span>
                         <span class="visible-mobile">Previous</span>
                       </a>
                     
@@ -467,8 +396,8 @@
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2022/11/07/mysql/(%E5%8D%81%E4%BA%94)mysql%20%E4%B8%80%E4%B8%BB%E5%A4%9A%E4%BB%8E%E5%A6%82%E4%BD%95%E8%BF%9B%E8%A1%8C%E4%B8%BB%E4%BB%8E%E5%88%87%E6%8D%A2/" title="(十五)mysql 一主多从如何进行主从切换">
-                        <span class="hidden-mobile">(十五)mysql 一主多从如何进行主从切换</span>
+                      <a href="/2022/11/12/redis/(%E4%B9%9D)redis%20%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90/" title="(九)redis 性能分析">
+                        <span class="hidden-mobile">(九)redis 性能分析</span>
                         <span class="visible-mobile">Next</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>

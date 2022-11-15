@@ -16,24 +16,24 @@
   <meta name="author" content="n!Ck">
   <meta name="keywords" content="">
   
-    <meta name="description" content="一主多从架构下的读写分离先回顾下一主多从的结构图  读写分离的主要目的就是为了 分摊主库上的请求压力 ,上面的架构主要是在 client 客户端主动做负载均衡; 在这种模式下,会把数据库的配置信息放到客户端的连接层,由客户端主动选择处理写请求和读请求的数据库实例 还有一种就是在客户端和数据库之间新增一个代理网关(正向代理:发送方不知道实际处理方是谁,只知道一个处理方代理),这样客户端就不用区分读写">
+    <meta name="description" content="redis 如何保证高可用对于 redis 来说高可用有两层含义  异常宕机时数据尽量不丢失 服务尽量少中断  对于第 1 点来说,redis 通过 AOF 和 RDB 两种不同的持久化方式来保证数据尽量不丢失 对于第 2 点来说,如果一个节点挂掉了,想要中断服务的时间尽可能短,最简单的办法就是部署多台实例; 这样某个节点挂掉之后还能有其他节点继续对外提供服务 对于第 2 点,如何保证每个节点之间">
 <meta property="og:type" content="article">
-<meta property="og:title" content="(十六)mysql 读写分离">
-<meta property="og:url" content="https://n1ck.cyou/2022/11/08/mysql/(%E5%8D%81%E5%85%AD)mysql%20%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/index.html">
+<meta property="og:title" content="(四)redis 主从同步">
+<meta property="og:url" content="https://n1ck.cyou/2022/11/11/redis/(%E5%9B%9B)redis%20%E4%B8%BB%E4%BB%8E%E5%90%8C%E6%AD%A5/index.html">
 <meta property="og:site_name" content="n!Ck playground">
-<meta property="og:description" content="一主多从架构下的读写分离先回顾下一主多从的结构图  读写分离的主要目的就是为了 分摊主库上的请求压力 ,上面的架构主要是在 client 客户端主动做负载均衡; 在这种模式下,会把数据库的配置信息放到客户端的连接层,由客户端主动选择处理写请求和读请求的数据库实例 还有一种就是在客户端和数据库之间新增一个代理网关(正向代理:发送方不知道实际处理方是谁,只知道一个处理方代理),这样客户端就不用区分读写">
+<meta property="og:description" content="redis 如何保证高可用对于 redis 来说高可用有两层含义  异常宕机时数据尽量不丢失 服务尽量少中断  对于第 1 点来说,redis 通过 AOF 和 RDB 两种不同的持久化方式来保证数据尽量不丢失 对于第 2 点来说,如果一个节点挂掉了,想要中断服务的时间尽可能短,最简单的办法就是部署多台实例; 这样某个节点挂掉之后还能有其他节点继续对外提供服务 对于第 2 点,如何保证每个节点之间">
 <meta property="og:locale" content="en_US">
-<meta property="og:image" content="https://n1ck.cyou/img/mysql.png">
-<meta property="article:published_time" content="2022-11-08T01:09:29.000Z">
-<meta property="article:modified_time" content="2022-11-09T01:15:35.011Z">
+<meta property="og:image" content="https://n1ck.cyou/img/redis.png">
+<meta property="article:published_time" content="2022-11-11T00:04:07.000Z">
+<meta property="article:modified_time" content="2022-11-11T01:11:08.787Z">
 <meta property="article:author" content="n!Ck">
-<meta property="article:tag" content="mysql">
+<meta property="article:tag" content="redis">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://n1ck.cyou/img/mysql.png">
+<meta name="twitter:image" content="https://n1ck.cyou/img/redis.png">
   
   
   
-  <title>(十六)mysql 读写分离 - n!Ck playground</title>
+  <title>(四)redis 主从同步 - n!Ck playground</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -198,7 +198,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="(十六)mysql 读写分离"></span>
+            <span id="subtitle" data-typed-text="(四)redis 主从同步"></span>
           
         </div>
 
@@ -209,8 +209,8 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2022-11-08 09:09" pubdate>
-          November 8, 2022 am
+        <time datetime="2022-11-11 08:04" pubdate>
+          November 11, 2022 am
         </time>
       </span>
     
@@ -270,103 +270,81 @@
         <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
-            <h1 style="display: none">(十六)mysql 读写分离</h1>
+            <h1 style="display: none">(四)redis 主从同步</h1>
             
             
               <div class="markdown-body">
                 
-                <h3 id="一主多从架构下的读写分离"><a href="#一主多从架构下的读写分离" class="headerlink" title="一主多从架构下的读写分离"></a>一主多从架构下的读写分离</h3><p>先回顾下一主多从的结构图</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7y196hmklj30j00cttan.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
-<p>读写分离的主要目的就是为了 <strong>分摊主库上的请求压力</strong> ,上面的架构主要是在 <code>client</code> 客户端主动做负载均衡; 在这种模式下,会把数据库的配置信息放到客户端的连接层,由客户端主动选择处理写请求和读请求的数据库实例</p>
-<p>还有一种就是在客户端和数据库之间新增一个代理网关(正向代理:发送方不知道实际处理方是谁,只知道一个处理方代理),这样客户端就不用区分读写请求,只需要把请求全部发送给代理即可; 具体的读写请求分发到主库还是从库全部由代理判断</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7y19d7bvhj30hb0dvq4f.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
-<p>无论是那种架构,都存在一个问题: <strong>由于存在主从延迟,客户端刚刚写入一条数据后马上发起查询请求,此时处理读请求的从库很可能还没来得及完成主从同步,导致数据不一致</strong></p>
-<p>读写分离解决数据不一致的方案主要有以下几种:</p>
+                <h3 id="redis-如何保证高可用"><a href="#redis-如何保证高可用" class="headerlink" title="redis 如何保证高可用"></a>redis 如何保证高可用</h3><p>对于 redis 来说高可用有两层含义</p>
 <ol>
-<li>强制查主库</li>
-<li><code>sleep</code> 等待</li>
-<li>判断是否存在主从延迟</li>
-<li><code>semi-sync</code></li>
-<li>等待主库位点</li>
-<li>等待主库 <code>GTID</code></li>
+<li>异常宕机时数据尽量不丢失</li>
+<li>服务尽量少中断</li>
 </ol>
-<h4 id="强制查主库"><a href="#强制查主库" class="headerlink" title="强制查主库"></a>强制查主库</h4><p>业务方将请求分为以下两类:</p>
+<p>对于第 1 点来说,redis 通过 <code>AOF</code> 和 <code>RDB</code> 两种不同的持久化方式来保证数据尽量不丢失</p>
+<p>对于第 2 点来说,如果一个节点挂掉了,想要中断服务的时间尽可能短,最简单的办法就是部署多台实例; 这样某个节点挂掉之后还能有其他节点继续对外提供服务</p>
+<p>对于第 2 点,如何保证每个节点之间的数据一致性,又成了难题</p>
+<h4 id="redis-的读写分离"><a href="#redis-的读写分离" class="headerlink" title="redis 的读写分离"></a>redis 的读写分离</h4><p>如果所有节点之间平行对外提供服务,即每个节点都能处理读和写请求; 对于读请求来说是幂等的,所有节点都可以提供读服务,这个不需要额外考虑</p>
+<p>对于写请求来说,如果客户端 3 个写请求分别被发到了 3 个不同的节点上,对于客户端来说,后续的查询无论命中了哪个节点,都是脏数据</p>
+<p>redis 采用读写分离避免上述情况发生: 读请求从库和主库都能处理响应; 写请求只有主库能够处理,在主库处理完成后同步给其他从库保证数据的 <strong>最终一致性</strong></p>
+<p>可以看到,redis 的读写分离只能保证 <strong>最终一致性</strong>, 不是 <strong>强一致性</strong></p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h80wk46gmkj30im067gmt.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
+<h3 id="redis-主从同步"><a href="#redis-主从同步" class="headerlink" title="redis 主从同步"></a>redis 主从同步</h3><p>启动 redis 实例时,可以通过 <code>replaceof</code> 或者 <code>slaveof 5.0 之前</code> 指令形成主从关系,之后会按照 3 个过程进行第一次主从同步</p>
 <ol>
-<li>有强一致性要求的请求,强制把这部分读请求打到主库上,保证数据一致性</li>
-<li>接受一定时间内数据不一致的请求,把这部分读请求打到从库上,由主从同步保证一定时间内的最终一致性即可</li>
+<li>主从之间建立连接,准备开始同步</li>
+<li>主库将数据发送给从库</li>
+<li>主库将第 2 步期间新进来的写请求发送个从库</li>
 </ol>
-<p>考虑一种极端场景,所有的请求都有强一致性要求; 这样一主多从的读写分离结构就退化为只有一个主库的单节点结构; 失去了读写分离的意义</p>
-<h4 id="sleep-等待"><a href="#sleep-等待" class="headerlink" title="sleep 等待"></a>sleep 等待</h4><p>在主库完成写请求之后,下一个强一致性读请求到达业务方,在发送到从库之前先 <code>sleep(x)</code> 等待一段时间 <code>x</code></p>
-<p>假设当前的主从延迟在 <code>2s</code> 以内,这样 <code>sleep(2)</code> 之后就可以认为从库已经同步了刚刚最新的写请求,此时业务方再把读请求发送到从库上,有很大概率能拿到最新的数据</p>
-<p>这个方案仍然是不可靠的,假如主从延迟并不稳定在固定值之内</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h80wka46xej30j208fq59.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
+<h4 id="建立连接阶段"><a href="#建立连接阶段" class="headerlink" title="建立连接阶段"></a>建立连接阶段</h4><p>从库向主库发送指令 <code>psync</code> 表示即将进行主从同步,参数包含 <code>主库的实例 id</code> 和 <code>同步进度偏移量</code><br><code>?</code> 由于第一次进行主从同步,此时从库并不知道主库的实例 id; <code>-1</code> 表示第一次进行全量同步</p>
+<p>当主库接收到从库的 <code>psync</code> 指令后,会通过 <code>fullsync</code> 指令响应给从库,并且在响应里面带上自己的 <code>主库实例 id</code> 和 <code>当前的复制进度</code></p>
+<h4 id="全量同步阶段"><a href="#全量同步阶段" class="headerlink" title="全量同步阶段"></a>全量同步阶段</h4><p>在完成握手建立连接之后,主库会把当前的所有数据全部发送给从库; 从库接收到数据后在本地完成数据加载; 这个阶段使用 <code>RDB</code> 方式进行数据导入</p>
 <ol>
-<li>如果主从延迟只有 <code>0.5s</code> 了,此时等待 <code>2s</code> 显然时间过长</li>
-<li>如果主从延迟超过了 <code>2s</code>, 即使有等待的时间,还是会读取到历史脏数据,导致数据不一致的问题</li>
+<li>主库开始全量同步,执行 <code>bgsave</code> 命令 <code>fork</code> 一个子线程开始生成全量 <code>RDB</code> 文件</li>
+<li>接着将这个全量 <code>RDB</code> 文件发送给从库</li>
+<li>从库接收到主库的全量 <code>RDB</code> 文件之后,直接清空本地的数据; 使用主库的全量 <code>RDB</code> 文件导入到本地的数据库; 避免留下之前的脏数据</li>
 </ol>
-<h4 id="判断是否存在主从延迟"><a href="#判断是否存在主从延迟" class="headerlink" title="判断是否存在主从延迟"></a>判断是否存在主从延迟</h4><ol>
-<li>通过主从延迟时间判断是否存在主从延迟,每次查询前,先获取 <code>seconds_behind_master</code> 值,判断主从延迟的时间是否等于 0; 如果等于 0 就发起读请求,否则就等待主从延迟的时间变为 0 后才执行查询</li>
-<li>通过位点判断是否存在主从延迟,查询主库上的最新位点和从库上的最新位点,如果两个位点相同,则认为没有主从延迟可以执行查请求;否则就等待直到位点相同后才执行查询</li>
-<li>通过 <code>GTID</code> 判断是否存在主从延迟,查询主库的 <code>GTID</code> 集合与从库的 <code>GTID</code> 集合是否相同; 若相同则执行查询请求;否则就等待直到相同后才执行查询</li>
-</ol>
-<p>每次判断是否存在主从延迟,无论选用那种方式判断,也都还是会发生数据不一致的问题</p>
-<p>考虑如下场景,主库 A 已经写入 2 个事务到 <code>binlog</code> ,并且发送了前两个事务到从库 B 里面,且从库 <code>B</code> 也已经同步完成; 此时主库 A 上一个新事务 3 刚刚写入完成,还没来得及发送</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7y19iv59mj30bq0a6wfe.jpg" srcset="/img/loading.gif" lazyload alt="img_2.png"></p>
-<p>此时无论是位点还是 <code>GTID</code> 都会认为没有发生主从延迟,但严格上来说此时的读请求,在从库上仍然是查询不到事务 3 的</p>
-<h4 id="semi-sync-半同步"><a href="#semi-sync-半同步" class="headerlink" title="semi-sync 半同步"></a>semi-sync 半同步</h4><p><code>semi-sync</code> 半同步的设计如下:</p>
+<p>根据 <code>RDB</code> 快照的生成过程,在主从同步时,主库的主线程仍然能够处理请求,自然也会接收到新的写请求</p>
+<p>为了保证这些写请求在从库上不会丢失; 主库会把 <code>RDB</code> 期间的写请求全部写入 <code>RDB</code> 缓冲区,即 <code>replication buffer</code></p>
+<p>当主库将全量 <code>RDB</code> 文件发送完成之后,再把这个增量 <code>RDB</code> 文件继续发送个从库; 从库将这两个 <code>RDB</code> 文件的数据应用到本地的数据库之后,就完成了一次全量同步</p>
+<h4 id="级联部署"><a href="#级联部署" class="headerlink" title="级联部署"></a>级联部署</h4><p>可以看到在全量同步的过程当中,有两个明显的性能问题</p>
 <ol>
-<li>事务提交后,主库把 <code>binlog</code> 发送给从库</li>
-<li>从库收到 <code>binlog</code> 在消费 <code>relay log</code> 并完成从库 <code>binlog</code> 的写入后,会给主库发送一个 <code>ack</code> 表示完成当前事务的同步</li>
-<li>主库收到 <code>ack</code> 之后,才会返回给客户端表示当前事务已经完成</li>
+<li>主库生成全量的 <code>RDB</code> 文件</li>
+<li>主库将全量的 <code>RDB</code> 文件通过网络发送给从库</li>
 </ol>
-<p>也就是说 <code>semi-sync</code> 半同步机制保证了所有返回给客户端的事务请求,都是在从库上完成了同步的</p>
-<p>在一主多从结构下,<code>semi-sync</code> 也可能会犯错</p>
-<p>如果一个从库收到同步 <code>binlog</code> 的请求后,完成同步并向主库回复了 <code>ack</code>; 此时主库认为这个事务的同步已经完成,则向客户端回复成功; 假如针对这个事务数据的读请求进来,被代理分配到一个还没有完成同步的从库上,此时又产生了数据不一致的问题</p>
-<p>而且如果是基于位点或者 <code>GTID</code> 的半同步,如果主库压力很大其不停地在推进位点或者 <code>GTID</code> 而从库可能会一直在追赶主库的同步进度</p>
-<p>由于主从延迟加上 <code>semi-sync</code> 半同步机制,对于一个事务来说,从库迟迟不会向主库回复 <code>ack</code> ,从而主库不会向客户端回复成功; 导致整个业务阻塞</p>
-<p>对于一笔刚写入完成的事务,并不需要完全等待从库完成同步后,才回复 <code>ack</code> 可以看一下主从同步之间的中间状态</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7y19r2wa6j30oe0ixdk3.jpg" srcset="/img/loading.gif" lazyload alt="img_3.png"></p>
-<p>对于等待位点检测主从延迟的方案来说,上面的请求中,从库和主库的位点一直都不相同; 如果一个查询必须要等待同步完成才能响应的话,上面的步骤将会导致整个查询不可用</p>
-<p>其实当一个事务已经同步写入从库的 <code>binlog</code> 当中并完成刷盘,此时就可以认为这个事务的同步已经完成了; 至于其他事务导致的主从延迟,其实和当前已同步完成的事务无关</p>
-<p>总结,使用 <code>semi-sync</code> 且检测主从延迟的方案,存在两个问题</p>
+<p>根据之前说的,生成 <code>RDB</code> 快照时,即使是通过 <code>fork</code> 子线程的方式避免阻塞主线程; 但是如果全量数据过大的话,<code>fork</code> 操作本身也会阻塞主线程</p>
+<p>而且发送过大的全量 <code>RDB</code> 文件,也会消耗大量的网络资源,导致正常的读写请求无法进入主库</p>
+<p>为了解决全量同步过程当中主库压力过大的问题,redis 引入了 <code>级联部署</code> 的方式,即 <code>主-从-从</code> 模式</p>
+<p>在之前的主从结构当中,所有的从库都是直接和主库相连,这样对于同一份 <code>RDB</code> 快照来说,就要发给所有的从节点</p>
+<p>在级联部署当中,可以手动选择一个从库用于级联部分其他的从库,再让这个从库老大成为主库的从库</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h80wkfiie9j30j809o766.jpg" srcset="/img/loading.gif" lazyload alt="img_2.png"></p>
+<p>这样,就将原来的 <code>1 主 4 从</code> 变成了 <code>1 主 2 从</code>; 主库在做全量同步的时候,只需要发送 2 份 <code>RDB</code> 快照文件即可,网络压力直接减少到原来的一半</p>
+<h4 id="网络断连或者阻塞导致的主从同步失败"><a href="#网络断连或者阻塞导致的主从同步失败" class="headerlink" title="网络断连或者阻塞导致的主从同步失败"></a>网络断连或者阻塞导致的主从同步失败</h4><p>一旦主库和从库之间完成了首次全量同步,主库就会通过之前已经握手建立好的连接,持续地向从库发送新的写请求; 这个过程称为 <code>基于长连接的命令传播</code></p>
+<p>但是考虑到如果网络在这个过程当中出现了问题,如断连或者网络带宽本身就阻塞了; 主从同步就无法继续通过长连接传播命令; 这样也无法保证整个集群的数据一致性了</p>
 <ol>
-<li>一主多从,从某些还未来得及同步主库的从库查询时,可能查到没有更新的历史数据</li>
-<li>如果出从延迟持续存在,从库等延迟结束,主库等从库回复 <code>ack</code> ,这里可能导致长时间的等待</li>
+<li>对于老版本的 redis (2.8 以前) 网络断连之后,下一次连接恢复时,会进行一次全量同步; 如果网络本身质量不好频繁断连,每次的全量同步会造成非常大的性能问题</li>
+<li>redis 2.8 以后引入了 <code>增量同步</code> 技术; 即网络重连之后,不进行全量同步,而是会把主库在断连期间接收到写请求发送给从库</li>
 </ol>
-<h4 id="等待主库位点的操作"><a href="#等待主库位点的操作" class="headerlink" title="等待主库位点的操作"></a>等待主库位点的操作</h4><p>从库上有一条指令,可以用于主动检测与主库之间位点的差异</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> master_pos_wait(file, pos, timeout)<br></code></pre></td></tr></table></figure>
-
+<p>增量同步技术实现的关键点,就是之前介绍的全量同步过程中的第三个阶段,有个 <code>replication backlog</code> 缓冲区</p>
+<p>当全量同步在生成全量 <code>RDB</code> 和发送全量 <code>RDB</code> 的过程中,会把主库新接收到的写请求记录在这个 <code>replication buffer</code> 当中,当全量 <code>RDB</code> 文件发送完毕后,再把这些增量数据全部发送给从库</p>
+<p>看一看这个 <code>replication backlog (复制积压缓冲区)</code> 的具体构成:</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h80wkksknij30j204zwgb.jpg" srcset="/img/loading.gif" lazyload alt="img_3.png"></p>
+<p>与 mysql 的 <code>redo log</code> 非常类似,<code>replication backlog</code> 也是一个环形缓冲区</p>
+<p>有两个指针,记录主库写入的位置 <code>write_pos</code> 和从库读的位置 <code>read_pos</code>,这两个指针中间的差值就成为主从同步的偏移量 <code>offset</code> </p>
+<p>需要区分下: <code>replication buffer</code> 和 <code>replication backlog</code></p>
 <ol>
-<li><code>file</code> 指定了检测主库的 <code>binlog</code> 文件, <code>pos</code> 指定了检测事务的位置</li>
-<li><code>timeout</code> 制定这个函数检测时的超时时间</li>
+<li><code>buffer</code> 在每个从库上都有一份,用于接收增量同步进行时的数据</li>
+<li><code>backlog</code> 只在主库上有一份记录,所有的从库共用这一份 <code>backlog</code> 缓冲</li>
 </ol>
-<p>这条命令的返回值如下:</p>
-<ol>
-<li>正常返回一个正整数 <code>M</code> 表示从命令开始执行,到同步 <code>file</code> 的 <code>pos</code> 位置时,执行了多少个事务</li>
-<li>如果主从同步发生异常,返回 NULL</li>
-<li>如果超时,返回 <code>-1</code></li>
-<li>如果开始执行的时候,就已经超过 <code>pos</code> 位置,返回 0</li>
-</ol>
-<p>对于上面 <code>semi-sync</code> 产生的问题,看看等待主库位点如何解决</p>
-<ol>
-<li>主库事务 <code>trx1</code> 执行完成之后,立马查询当前主库的 <code>binlog</code> 文件 <code>file</code> 和最新的位点 <code>pos</code></li>
-<li>随机选择一个从库进行查询</li>
-<li>从库查询前先执行上述语句,检测主从同步之间的位点差异</li>
-<li>如果返回值 <code>&gt;=0</code> 则表示当前从库对于主库刚刚执行的事务 <code>trx1</code> 已经执行过了,可以由从库返回读请求</li>
-<li>否则说明当前从库还未来得及同步刚刚主库的事务,此时读请求交给主库响应</li>
-</ol>
-<ul>
-<li><p>假设检测主从延迟的等待时长为 <code>1s</code> ,如果这 <code>1s</code> 内,返回了大于 0 的整数 <code>M</code> ,则说明在这 <code>1s</code> 内,从库从某个之前的位置同步到 <code>pos</code> 时,应用了 <code>M</code> 个事务; 虽然等待了一些时间,但是好歹追上了主从延迟,所以从库可以相应对应的读请求</p>
-</li>
-<li><p>如果返回值等于 0,则表示从库当前同步主库的位点已经领先于主库执行事务 <code>trx1</code> 时的位点,此时从库肯定也是完成了事务 <code>trx1</code> 的同步,可以响应读请求</p>
-</li>
-<li><p>如果返回值等于 <code>-1</code> 或者 <code>NULL</code> 则说明在等待时间内从库都没能追上主从延迟,此时记录的肯定是历史数据,必须交给主库响应当前查询请求</p>
-</li>
-</ul>
-<p>图例如下:</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7y19xa2l8j30mh0g5n2i.jpg" srcset="/img/loading.gif" lazyload alt="img_4.png"></p>
-<p>退化到主库查询是一种通用的兜底方案,因为读请求不可能无限等待从库去追赶主从延迟;超时后就必须要由主库响应请求</p>
-<h4 id="等待-GTID-的操作"><a href="#等待-GTID-的操作" class="headerlink" title="等待 GTID 的操作"></a>等待 GTID 的操作</h4><p>同理,从库通过主库发送过来的事务 <code>GTID</code> ,判断自己当前的 <code>GTID</code> 集合是否包含对应事务的 <code>GTID</code> </p>
-<p>同样,超时后结束等待; 或者在等待时事务的 <code>GTID</code> 加入当前集合; 或者在检测时当前集合就已经包含了 <code>GTID</code> </p>
+<p>回顾一下第一次全量同步的第 1 步,从库向主库发送 <code>psync ? -1</code> 指令,其中 <code>offset=-1</code> 表示进行一次全量同步</p>
+<p>对于第一次全量同步,主库的写入点和从库的读取点是一致的,随着服务的持续运转,持续进行增量主从同步,主库的写入点和从库的读取点都会向后移动,正常来说,这两个指针的偏移量基本相等</p>
+<p>如果在某个时刻网络发生了断连,导致主从同步中断,在网络恢复之后; 从库会向主库发送 <code>psync 主库id offset</code> 的指令,将自己的读取点告诉给主库</p>
+<p>此时主库会判断当前从库的读取点和自己的写入点之间的差距,此时主库会把这中间差距的写入请求重新发送给从库; 由此继续进行增量的同步</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h80wkp7ytwj30j709omz8.jpg" srcset="/img/loading.gif" lazyload alt="img_4.png"></p>
+<h4 id="replication-backlog-覆盖写的问题"><a href="#replication-backlog-覆盖写的问题" class="headerlink" title="replication backlog 覆盖写的问题"></a>replication backlog 覆盖写的问题</h4><p>由于 <code>replication backlog</code> 是一个环形的缓冲区,如果网络断连或者主从延迟时间过长,会导致主库的写入点位置超过了从库的读入点,覆盖了部分还没有同步到从库的数据; 导致数据的不一致问题</p>
+<p>实际上在配置 <code>复制积压缓冲区</code> 的大小时,需要考虑到主库写入速度和网络传输速度; 而且为了应对一些突发状况,实际场景下还要把这个大小扩大一倍</p>
+<p>例如当前主库每秒写入 <code>2000</code> 条记录,每条记录大小为 <code>2KB</code>, 网络每秒能够传输 <code>1000</code> 条记录</p>
+<p>此时 <code>replication buffer</code> 缓冲需要保存 <code>1000</code> 条记录,大小至少需要 <code>2MB</code>,实际上 <code>replication backlog</code> 的大小就需要设置为 <code>buffer</code> 的两倍以上,避免覆盖写</p>
+<p>但是如果主库压力特别快,写入速度远超于从库同步的进度,再大的 <code>backlog</code> 也都将被主库写满; 所以一味地增加 <code>backlog</code> 的大小,属于治标不治本的方案</p>
 
                 
               </div>
@@ -385,7 +363,7 @@
     
       <span class="category-chain">
         
-  <a href="/categories/mysql/" class="category-chain-item">mysql</a>
+  <a href="/categories/redis/" class="category-chain-item">redis</a>
   
   
 
@@ -400,7 +378,7 @@
     <div class="post-meta">
       <i class="iconfont icon-tags"></i>
       
-        <a href="/tags/mysql/">#mysql</a>
+        <a href="/tags/redis/">#redis</a>
       
     </div>
   
@@ -412,8 +390,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>(十六)mysql 读写分离</div>
-      <div>https://n1ck.cyou/2022/11/08/mysql/(十六)mysql 读写分离/</div>
+      <div>(四)redis 主从同步</div>
+      <div>https://n1ck.cyou/2022/11/11/redis/(四)redis 主从同步/</div>
     </div>
     <div class="license-meta">
       
@@ -425,7 +403,7 @@
       
         <div class="license-meta-item license-meta-date">
           <div>Posted on</div>
-          <div>November 8, 2022</div>
+          <div>November 11, 2022</div>
         </div>
       
       
@@ -457,9 +435,9 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2022/11/09/redis/(%E4%B8%80)redis%20%E5%BA%95%E5%B1%82%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/" title="(一)redis 底层数据结构">
+                      <a href="/2022/11/11/redis/(%E4%BA%94)redis%20%E5%93%A8%E5%85%B5%E6%A8%A1%E5%BC%8F/" title="(四)redis 哨兵模式">
                         <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">(一)redis 底层数据结构</span>
+                        <span class="hidden-mobile">(四)redis 哨兵模式</span>
                         <span class="visible-mobile">Previous</span>
                       </a>
                     
@@ -467,8 +445,8 @@
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2022/11/07/mysql/(%E5%8D%81%E4%BA%94)mysql%20%E4%B8%80%E4%B8%BB%E5%A4%9A%E4%BB%8E%E5%A6%82%E4%BD%95%E8%BF%9B%E8%A1%8C%E4%B8%BB%E4%BB%8E%E5%88%87%E6%8D%A2/" title="(十五)mysql 一主多从如何进行主从切换">
-                        <span class="hidden-mobile">(十五)mysql 一主多从如何进行主从切换</span>
+                      <a href="/2022/11/10/redis/(%E4%B8%89)redis%20%E6%8C%81%E4%B9%85%E5%8C%96%E6%9C%BA%E5%88%B6/" title="(三)redis 持久化机制">
+                        <span class="hidden-mobile">(三)redis 持久化机制</span>
                         <span class="visible-mobile">Next</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>

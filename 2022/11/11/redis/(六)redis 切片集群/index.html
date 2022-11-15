@@ -16,24 +16,24 @@
   <meta name="author" content="n!Ck">
   <meta name="keywords" content="">
   
-    <meta name="description" content="一主多从架构下的读写分离先回顾下一主多从的结构图  读写分离的主要目的就是为了 分摊主库上的请求压力 ,上面的架构主要是在 client 客户端主动做负载均衡; 在这种模式下,会把数据库的配置信息放到客户端的连接层,由客户端主动选择处理写请求和读请求的数据库实例 还有一种就是在客户端和数据库之间新增一个代理网关(正向代理:发送方不知道实际处理方是谁,只知道一个处理方代理),这样客户端就不用区分读写">
+    <meta name="description" content="redis 的单机部署考虑如下情况,假如有一批数据预估在 25G 左右,此时应当选用什么样配置的 redis 来保存这批数据 通常情况下,redis 的机器内存要超过数据量才够,此时选用一台 32G 的服务器,还能有剩余 7G 来做 redis 持久化,持久化的方式选为 RDB 快照 可实际情况并不令人满意,在 redis 实例正常运行一段时间之后,开始变得缓慢起来,很容易想到是在做 RDB 快照">
 <meta property="og:type" content="article">
-<meta property="og:title" content="(十六)mysql 读写分离">
-<meta property="og:url" content="https://n1ck.cyou/2022/11/08/mysql/(%E5%8D%81%E5%85%AD)mysql%20%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/index.html">
+<meta property="og:title" content="(六)redis 切片集群">
+<meta property="og:url" content="https://n1ck.cyou/2022/11/11/redis/(%E5%85%AD)redis%20%E5%88%87%E7%89%87%E9%9B%86%E7%BE%A4/index.html">
 <meta property="og:site_name" content="n!Ck playground">
-<meta property="og:description" content="一主多从架构下的读写分离先回顾下一主多从的结构图  读写分离的主要目的就是为了 分摊主库上的请求压力 ,上面的架构主要是在 client 客户端主动做负载均衡; 在这种模式下,会把数据库的配置信息放到客户端的连接层,由客户端主动选择处理写请求和读请求的数据库实例 还有一种就是在客户端和数据库之间新增一个代理网关(正向代理:发送方不知道实际处理方是谁,只知道一个处理方代理),这样客户端就不用区分读写">
+<meta property="og:description" content="redis 的单机部署考虑如下情况,假如有一批数据预估在 25G 左右,此时应当选用什么样配置的 redis 来保存这批数据 通常情况下,redis 的机器内存要超过数据量才够,此时选用一台 32G 的服务器,还能有剩余 7G 来做 redis 持久化,持久化的方式选为 RDB 快照 可实际情况并不令人满意,在 redis 实例正常运行一段时间之后,开始变得缓慢起来,很容易想到是在做 RDB 快照">
 <meta property="og:locale" content="en_US">
-<meta property="og:image" content="https://n1ck.cyou/img/mysql.png">
-<meta property="article:published_time" content="2022-11-08T01:09:29.000Z">
-<meta property="article:modified_time" content="2022-11-09T01:15:35.011Z">
+<meta property="og:image" content="https://n1ck.cyou/img/redis.png">
+<meta property="article:published_time" content="2022-11-11T12:46:21.000Z">
+<meta property="article:modified_time" content="2022-11-11T15:35:23.672Z">
 <meta property="article:author" content="n!Ck">
-<meta property="article:tag" content="mysql">
+<meta property="article:tag" content="redis">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://n1ck.cyou/img/mysql.png">
+<meta name="twitter:image" content="https://n1ck.cyou/img/redis.png">
   
   
   
-  <title>(十六)mysql 读写分离 - n!Ck playground</title>
+  <title>(六)redis 切片集群 - n!Ck playground</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -198,7 +198,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="(十六)mysql 读写分离"></span>
+            <span id="subtitle" data-typed-text="(六)redis 切片集群"></span>
           
         </div>
 
@@ -209,8 +209,8 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2022-11-08 09:09" pubdate>
-          November 8, 2022 am
+        <time datetime="2022-11-11 20:46" pubdate>
+          November 11, 2022 pm
         </time>
       </span>
     
@@ -221,7 +221,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          2.8k words
+          2.6k words
         
       </span>
     
@@ -232,7 +232,7 @@
         
         
         
-          24 mins
+          22 mins
         
       </span>
     
@@ -270,103 +270,71 @@
         <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
-            <h1 style="display: none">(十六)mysql 读写分离</h1>
+            <h1 style="display: none">(六)redis 切片集群</h1>
             
             
               <div class="markdown-body">
                 
-                <h3 id="一主多从架构下的读写分离"><a href="#一主多从架构下的读写分离" class="headerlink" title="一主多从架构下的读写分离"></a>一主多从架构下的读写分离</h3><p>先回顾下一主多从的结构图</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7y196hmklj30j00cttan.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
-<p>读写分离的主要目的就是为了 <strong>分摊主库上的请求压力</strong> ,上面的架构主要是在 <code>client</code> 客户端主动做负载均衡; 在这种模式下,会把数据库的配置信息放到客户端的连接层,由客户端主动选择处理写请求和读请求的数据库实例</p>
-<p>还有一种就是在客户端和数据库之间新增一个代理网关(正向代理:发送方不知道实际处理方是谁,只知道一个处理方代理),这样客户端就不用区分读写请求,只需要把请求全部发送给代理即可; 具体的读写请求分发到主库还是从库全部由代理判断</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7y19d7bvhj30hb0dvq4f.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
-<p>无论是那种架构,都存在一个问题: <strong>由于存在主从延迟,客户端刚刚写入一条数据后马上发起查询请求,此时处理读请求的从库很可能还没来得及完成主从同步,导致数据不一致</strong></p>
-<p>读写分离解决数据不一致的方案主要有以下几种:</p>
+                <h3 id="redis-的单机部署"><a href="#redis-的单机部署" class="headerlink" title="redis 的单机部署"></a>redis 的单机部署</h3><p>考虑如下情况,假如有一批数据预估在 <code>25G</code> 左右,此时应当选用什么样配置的 redis 来保存这批数据</p>
+<p>通常情况下,redis 的机器内存要超过数据量才够,此时选用一台 <code>32G</code> 的服务器,还能有剩余 <code>7G</code> 来做 redis 持久化,持久化的方式选为 <code>RDB</code> 快照</p>
+<p>可实际情况并不令人满意,在 redis 实例正常运行一段时间之后,开始变得缓慢起来,很容易想到是在做 <code>RDB</code> 快照的时候造成了性能问题</p>
+<p>每当需要 <code>RDB</code> 快照的时候,主线程都会 <code>fork</code> 一个子线程去后台专门做快照,然而在 <code>fork</code> 的过程当中,需要复制主线程内的所有内存数据,足足有 <code>25G</code> 之大</p>
+<p>显然此时的 <code>fork</code> 操作阻塞了主线程的正常运行,需要更换 redis 的部署方式</p>
+<h3 id="redis-的切片集群"><a href="#redis-的切片集群" class="headerlink" title="redis 的切片集群"></a>redis 的切片集群</h3><p>相对于上面的单机部署来说,很容易想到集群化,将 <code>25G</code> 的数据平均分为 5 个 <code>5G</code> 大小的切片,将这个 5 个切片分别部署在 5 台 redis 实例上</p>
+<p>这样每个 redis 实例所需要的服务器资源也变少了,而且 <code>RDB</code> 快照时需要复制的内存数据页变小了,<code>fork</code> 操作对主线程的影响几乎没有</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h81m0nccsvj30j409x76v.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
+<h3 id="扩容方式"><a href="#扩容方式" class="headerlink" title="扩容方式"></a>扩容方式</h3><p>一般来说常见的扩容方式分为以下两种</p>
 <ol>
-<li>强制查主库</li>
-<li><code>sleep</code> 等待</li>
-<li>判断是否存在主从延迟</li>
-<li><code>semi-sync</code></li>
-<li>等待主库位点</li>
-<li>等待主库 <code>GTID</code></li>
+<li>纵向扩展: 每次增加单机的配置; 例如单机 <code>10G</code> 增加到单机 <code>50G</code> ,或者增加单机内存,或者更换单机更好的 CPU,都属于纵向扩展</li>
+<li>水平扩展: 每次增加一台与之前完全相同配置的 redis 实例来组成一个复杂的 redis 集群</li>
 </ol>
-<h4 id="强制查主库"><a href="#强制查主库" class="headerlink" title="强制查主库"></a>强制查主库</h4><p>业务方将请求分为以下两类:</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h81m0s34nkj30iu09agnh.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
+<h4 id="纵向扩展"><a href="#纵向扩展" class="headerlink" title="纵向扩展"></a>纵向扩展</h4><p>优点</p>
 <ol>
-<li>有强一致性要求的请求,强制把这部分读请求打到主库上,保证数据一致性</li>
-<li>接受一定时间内数据不一致的请求,把这部分读请求打到从库上,由主从同步保证一定时间内的最终一致性即可</li>
+<li>扩展时比较方便,实施简单</li>
 </ol>
-<p>考虑一种极端场景,所有的请求都有强一致性要求; 这样一主多从的读写分离结构就退化为只有一个主库的单节点结构; 失去了读写分离的意义</p>
-<h4 id="sleep-等待"><a href="#sleep-等待" class="headerlink" title="sleep 等待"></a>sleep 等待</h4><p>在主库完成写请求之后,下一个强一致性读请求到达业务方,在发送到从库之前先 <code>sleep(x)</code> 等待一段时间 <code>x</code></p>
-<p>假设当前的主从延迟在 <code>2s</code> 以内,这样 <code>sleep(2)</code> 之后就可以认为从库已经同步了刚刚最新的写请求,此时业务方再把读请求发送到从库上,有很大概率能拿到最新的数据</p>
-<p>这个方案仍然是不可靠的,假如主从延迟并不稳定在固定值之内</p>
+<p>缺点:</p>
 <ol>
-<li>如果主从延迟只有 <code>0.5s</code> 了,此时等待 <code>2s</code> 显然时间过长</li>
-<li>如果主从延迟超过了 <code>2s</code>, 即使有等待的时间,还是会读取到历史脏数据,导致数据不一致的问题</li>
+<li>单机内存过大时,一次全量的 <code>RDB</code> 操作在 <code>fork</code> 时会阻塞主线程更长的时间</li>
+<li>从 <code>16G</code> 扩为 <code>32G</code> 很便宜,但是从 <code>512G</code> 扩容到 <code>1T</code> 其成本将会非常高</li>
 </ol>
-<h4 id="判断是否存在主从延迟"><a href="#判断是否存在主从延迟" class="headerlink" title="判断是否存在主从延迟"></a>判断是否存在主从延迟</h4><ol>
-<li>通过主从延迟时间判断是否存在主从延迟,每次查询前,先获取 <code>seconds_behind_master</code> 值,判断主从延迟的时间是否等于 0; 如果等于 0 就发起读请求,否则就等待主从延迟的时间变为 0 后才执行查询</li>
-<li>通过位点判断是否存在主从延迟,查询主库上的最新位点和从库上的最新位点,如果两个位点相同,则认为没有主从延迟可以执行查请求;否则就等待直到位点相同后才执行查询</li>
-<li>通过 <code>GTID</code> 判断是否存在主从延迟,查询主库的 <code>GTID</code> 集合与从库的 <code>GTID</code> 集合是否相同; 若相同则执行查询请求;否则就等待直到相同后才执行查询</li>
-</ol>
-<p>每次判断是否存在主从延迟,无论选用那种方式判断,也都还是会发生数据不一致的问题</p>
-<p>考虑如下场景,主库 A 已经写入 2 个事务到 <code>binlog</code> ,并且发送了前两个事务到从库 B 里面,且从库 <code>B</code> 也已经同步完成; 此时主库 A 上一个新事务 3 刚刚写入完成,还没来得及发送</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7y19iv59mj30bq0a6wfe.jpg" srcset="/img/loading.gif" lazyload alt="img_2.png"></p>
-<p>此时无论是位点还是 <code>GTID</code> 都会认为没有发生主从延迟,但严格上来说此时的读请求,在从库上仍然是查询不到事务 3 的</p>
-<h4 id="semi-sync-半同步"><a href="#semi-sync-半同步" class="headerlink" title="semi-sync 半同步"></a>semi-sync 半同步</h4><p><code>semi-sync</code> 半同步的设计如下:</p>
+<h4 id="横向扩展"><a href="#横向扩展" class="headerlink" title="横向扩展"></a>横向扩展</h4><p>为了避免纵向扩展的两个问题,又要保存更多的数据,只能通过增加 redis 实例的数量来实现</p>
+<p>在面对千万级, 亿级数据的时候,集群化部署 redis 是非常合适的选择</p>
+<p>缺点:</p>
 <ol>
-<li>事务提交后,主库把 <code>binlog</code> 发送给从库</li>
-<li>从库收到 <code>binlog</code> 在消费 <code>relay log</code> 并完成从库 <code>binlog</code> 的写入后,会给主库发送一个 <code>ack</code> 表示完成当前事务的同步</li>
-<li>主库收到 <code>ack</code> 之后,才会返回给客户端表示当前事务已经完成</li>
+<li>数据切片之后,该如何分配到不同的 redis 实例上</li>
+<li>客户端如何确认自己要查询或者更改的数据在哪个 redis 实例上</li>
 </ol>
-<p>也就是说 <code>semi-sync</code> 半同步机制保证了所有返回给客户端的事务请求,都是在从库上完成了同步的</p>
-<p>在一主多从结构下,<code>semi-sync</code> 也可能会犯错</p>
-<p>如果一个从库收到同步 <code>binlog</code> 的请求后,完成同步并向主库回复了 <code>ack</code>; 此时主库认为这个事务的同步已经完成,则向客户端回复成功; 假如针对这个事务数据的读请求进来,被代理分配到一个还没有完成同步的从库上,此时又产生了数据不一致的问题</p>
-<p>而且如果是基于位点或者 <code>GTID</code> 的半同步,如果主库压力很大其不停地在推进位点或者 <code>GTID</code> 而从库可能会一直在追赶主库的同步进度</p>
-<p>由于主从延迟加上 <code>semi-sync</code> 半同步机制,对于一个事务来说,从库迟迟不会向主库回复 <code>ack</code> ,从而主库不会向客户端回复成功; 导致整个业务阻塞</p>
-<p>对于一笔刚写入完成的事务,并不需要完全等待从库完成同步后,才回复 <code>ack</code> 可以看一下主从同步之间的中间状态</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7y19r2wa6j30oe0ixdk3.jpg" srcset="/img/loading.gif" lazyload alt="img_3.png"></p>
-<p>对于等待位点检测主从延迟的方案来说,上面的请求中,从库和主库的位点一直都不相同; 如果一个查询必须要等待同步完成才能响应的话,上面的步骤将会导致整个查询不可用</p>
-<p>其实当一个事务已经同步写入从库的 <code>binlog</code> 当中并完成刷盘,此时就可以认为这个事务的同步已经完成了; 至于其他事务导致的主从延迟,其实和当前已同步完成的事务无关</p>
-<p>总结,使用 <code>semi-sync</code> 且检测主从延迟的方案,存在两个问题</p>
-<ol>
-<li>一主多从,从某些还未来得及同步主库的从库查询时,可能查到没有更新的历史数据</li>
-<li>如果出从延迟持续存在,从库等延迟结束,主库等从库回复 <code>ack</code> ,这里可能导致长时间的等待</li>
-</ol>
-<h4 id="等待主库位点的操作"><a href="#等待主库位点的操作" class="headerlink" title="等待主库位点的操作"></a>等待主库位点的操作</h4><p>从库上有一条指令,可以用于主动检测与主库之间位点的差异</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> master_pos_wait(file, pos, timeout)<br></code></pre></td></tr></table></figure>
+<h3 id="redis-cluster-技术"><a href="#redis-cluster-技术" class="headerlink" title="redis cluster 技术"></a>redis cluster 技术</h3><p>在 redis 3.0 之后,官方提供了 <code>redis cluster</code> 技术来实现切片集群</p>
+<h4 id="redis-cluster-哈希槽分配"><a href="#redis-cluster-哈希槽分配" class="headerlink" title="redis cluster 哈希槽分配"></a>redis cluster 哈希槽分配</h4><p>具体来说,<code>redis cluster</code> 技术采用 <code>hash slot</code> 哈希槽来处理数据和实例之间的映射关系</p>
+<p>在 <code>redis cluster</code> 方案当中,一共提供了 <code>16384</code> 个槽位用于存放数据; 每个保存在 redis 里面的键值对; 都会根据其 <code>key</code> 值被映射到一个唯一的哈希槽里面存放 <code>value</code>;<br>具体的哈希算法是将 <code>key</code> 通过 <code>CRC16</code> 校验后得到一个 <code>16bit</code> 的值,再把这个值和 <code>16384</code> 取模,最后得到的结果就是具体的哈希槽</p>
+<p>在创建 redis 集群的时候,redis 会自动的把 <code>16384</code> 个哈希槽平均分配到每个实例里面; 若有 <code>N</code> 个实例,则每个实例存储的哈希槽个数为 <code>16384/N</code></p>
+<p>当然也可以通过配置,手动决定哪些实例保存哪些哈希槽</p>
+<p>通常来说如果 redis 集群每个实例的配置有所不同,如果 <code>key</code> 都是均匀访问,那么配置低的实例面临的压力会明显大于配置高的实例,此时就需要手动分配哈希槽; 如果每个实例的配置一样,那么 redis 自动分配就更加简单</p>
+<p>需要注意的是: 如果手动分配哈希槽,则需要所有 <code>16384</code> 个槽位全部分配完,否则 <code>redis cluster</code> 无法正常工作</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h81m0wakvmj30iz09lwh3.jpg" srcset="/img/loading.gif" lazyload alt="img_2.png"></p>
+<h4 id="客户端如何查询"><a href="#客户端如何查询" class="headerlink" title="客户端如何查询"></a>客户端如何查询</h4><p>当完成数据到哈希槽的分配,哈希槽到实例的分配之后,客户端如何得知自己需要访问的数据应该请求哪个具体的实例呢</p>
+<p>首先数据到哈希槽的映射关系,可以通过 <code>CRC16(key) % 16384</code> 得到; 然而哈希槽到实例的映射关系则无法通过计算得到</p>
+<p>但是实际客户端在访问 redis 集群的时候,只需要连接上任意一个实例,就可以访问整个集群当中其他实例上的数据,这是如何做到的 -&gt; redis 的 <code>Gossip</code> 协议</p>
+<h4 id="客户端如何查询具体某个-key"><a href="#客户端如何查询具体某个-key" class="headerlink" title="客户端如何查询具体某个 key"></a>客户端如何查询具体某个 key</h4><p>集群稳定运行一段时间后,节点之间通过 <code>Gossip</code> 协议可以保证每个节点都有全量的哈希槽信息</p>
+<p>这样客户端连接任意一个实例,都能够获得整个集群的哈希槽分配情况,并且把这个分配信息缓存到自己的本地</p>
+<p>当客户端需要访问一条数据时,首先根据 <code>CRC16(key) % 16384</code> 得到当前 <code>key</code> 所属的哈希槽,再根据自己维护的实例和哈希槽的映射关系表来访问 <code>key</code> 所在的实例</p>
+<p>实际上,哈希槽和实例的对应关系也并不是一成不变的; 对于业务压力大的时候,需要新增 redis 实例; 自然也会有减少 redis 实例的情况</p>
+<p>redis 为了负载均衡,当实例个数发生变化的时候,会将哈希槽全部重新分配一次; 此时实例之间继续通过一定的通信方式将哈希槽的配置信息互相传递,然而客户端该怎么办呢</p>
+<p>redis 提供了一种 <code>重定向机制</code>,就是当客户端通过本地缓存的旧哈希槽实例映射表访问具体某个 <code>key</code> 时,如果此时的实例上并没有这个 <code>key</code> 值,就会向客户端回复一个 <code>MOVED</code> 指令, <code>MOVED</code><br>指令里面就包含了 <code>key</code> 所在最新实例的 ip 地址和端口等信息</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">GET</span> testkey<br><span class="hljs-attribute">MOVED</span> <span class="hljs-number">7800</span> <span class="hljs-number">172.16.19.3:6379</span><br></code></pre></td></tr></table></figure>
 
-<ol>
-<li><code>file</code> 指定了检测主库的 <code>binlog</code> 文件, <code>pos</code> 指定了检测事务的位置</li>
-<li><code>timeout</code> 制定这个函数检测时的超时时间</li>
-</ol>
-<p>这条命令的返回值如下:</p>
-<ol>
-<li>正常返回一个正整数 <code>M</code> 表示从命令开始执行,到同步 <code>file</code> 的 <code>pos</code> 位置时,执行了多少个事务</li>
-<li>如果主从同步发生异常,返回 NULL</li>
-<li>如果超时,返回 <code>-1</code></li>
-<li>如果开始执行的时候,就已经超过 <code>pos</code> 位置,返回 0</li>
-</ol>
-<p>对于上面 <code>semi-sync</code> 产生的问题,看看等待主库位点如何解决</p>
-<ol>
-<li>主库事务 <code>trx1</code> 执行完成之后,立马查询当前主库的 <code>binlog</code> 文件 <code>file</code> 和最新的位点 <code>pos</code></li>
-<li>随机选择一个从库进行查询</li>
-<li>从库查询前先执行上述语句,检测主从同步之间的位点差异</li>
-<li>如果返回值 <code>&gt;=0</code> 则表示当前从库对于主库刚刚执行的事务 <code>trx1</code> 已经执行过了,可以由从库返回读请求</li>
-<li>否则说明当前从库还未来得及同步刚刚主库的事务,此时读请求交给主库响应</li>
-</ol>
-<ul>
-<li><p>假设检测主从延迟的等待时长为 <code>1s</code> ,如果这 <code>1s</code> 内,返回了大于 0 的整数 <code>M</code> ,则说明在这 <code>1s</code> 内,从库从某个之前的位置同步到 <code>pos</code> 时,应用了 <code>M</code> 个事务; 虽然等待了一些时间,但是好歹追上了主从延迟,所以从库可以相应对应的读请求</p>
-</li>
-<li><p>如果返回值等于 0,则表示从库当前同步主库的位点已经领先于主库执行事务 <code>trx1</code> 时的位点,此时从库肯定也是完成了事务 <code>trx1</code> 的同步,可以响应读请求</p>
-</li>
-<li><p>如果返回值等于 <code>-1</code> 或者 <code>NULL</code> 则说明在等待时间内从库都没能追上主从延迟,此时记录的肯定是历史数据,必须交给主库响应当前查询请求</p>
-</li>
-</ul>
-<p>图例如下:</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7y19xa2l8j30mh0g5n2i.jpg" srcset="/img/loading.gif" lazyload alt="img_4.png"></p>
-<p>退化到主库查询是一种通用的兜底方案,因为读请求不可能无限等待从库去追赶主从延迟;超时后就必须要由主库响应请求</p>
-<h4 id="等待-GTID-的操作"><a href="#等待-GTID-的操作" class="headerlink" title="等待 GTID 的操作"></a>等待 GTID 的操作</h4><p>同理,从库通过主库发送过来的事务 <code>GTID</code> ,判断自己当前的 <code>GTID</code> 集合是否包含对应事务的 <code>GTID</code> </p>
-<p>同样,超时后结束等待; 或者在等待时事务的 <code>GTID</code> 加入当前集合; 或者在检测时当前集合就已经包含了 <code>GTID</code> </p>
+<p>其中 <code>7800</code> 表示当前 <code>key</code> 所处第 <code>7800</code> 个哈希槽,而当前哈希槽归 <code>172.16.19.3:6379</code> 这个实例维护; 这样一来客户端就可以重新向新的实例发起请求了</p>
+<p>同时客户端还会把最新的哈希槽实例映射关系更新到本地的缓存,以便下次可以直接访问而不再需要重定向 <code>MOVED</code> 了</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h81m11azd2j30hy0f1dk7.jpg" srcset="/img/loading.gif" lazyload alt="img_3.png"></p>
+<h4 id="哈希槽迁移时查询数据"><a href="#哈希槽迁移时查询数据" class="headerlink" title="哈希槽迁移时查询数据"></a>哈希槽迁移时查询数据</h4><p>有一种场景,就是当实例数量发生变更,redis 在做哈希槽迁移时,此时客户端向一个正在发生哈希槽迁移的实例发起请求,此时客户端会受到一条回复</p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs nginx"><span class="hljs-attribute">GET</span> testkey<br>(<span class="hljs-literal">error</span>) ASK <span class="hljs-number">7800</span> <span class="hljs-number">172.16.19.5:6379</span><br></code></pre></td></tr></table></figure>
+
+<p>其中 <code>7800</code> 表示当前请求的 <code>key</code> 所处的哈希槽, 返回 <code>ASK</code> 命令表示当前哈希槽正处于迁移状态, <code>172.16.19.5:6379</code> 表示数据所处的最新实例地址</p>
+<p>此时客户端需要再向实例发起 <code>ASKING</code> 命令,表示 <strong>允许</strong> 让实例返回当前请求的数据,接下来再发送 <code>GET</code> 命令得到具体的数据</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h81m15sl7cj30j20ef42s.jpg" srcset="/img/loading.gif" lazyload alt="img_4.png"></p>
+<h4 id="MOVED-和-ASK"><a href="#MOVED-和-ASK" class="headerlink" title="MOVED 和 ASK"></a>MOVED 和 ASK</h4><p><code>MOVED</code> 重定向指令是在哈希槽已经完成了迁移后,请求到老实例时回复的指令,此时客户端会根据老实例回复的信息更新自己本地缓存的哈希槽实例映射表</p>
+<p><code>ASK</code> 指令是在哈希槽正在迁移时,请求到老实例回复的指令; 此时客户端需要根据老实例回复的 <code>key</code> 所在的新实例发送 <code>ASKING</code> 指令表示允许从正在迁移哈希槽的实例中读取数据; 再发送 <code>GET</code> 指令真正读取数据;<br>此时客户端并不会更新自己本地缓存的哈希槽实例映射表</p>
 
                 
               </div>
@@ -385,7 +353,7 @@
     
       <span class="category-chain">
         
-  <a href="/categories/mysql/" class="category-chain-item">mysql</a>
+  <a href="/categories/redis/" class="category-chain-item">redis</a>
   
   
 
@@ -400,7 +368,7 @@
     <div class="post-meta">
       <i class="iconfont icon-tags"></i>
       
-        <a href="/tags/mysql/">#mysql</a>
+        <a href="/tags/redis/">#redis</a>
       
     </div>
   
@@ -412,8 +380,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>(十六)mysql 读写分离</div>
-      <div>https://n1ck.cyou/2022/11/08/mysql/(十六)mysql 读写分离/</div>
+      <div>(六)redis 切片集群</div>
+      <div>https://n1ck.cyou/2022/11/11/redis/(六)redis 切片集群/</div>
     </div>
     <div class="license-meta">
       
@@ -425,7 +393,7 @@
       
         <div class="license-meta-item license-meta-date">
           <div>Posted on</div>
-          <div>November 8, 2022</div>
+          <div>November 11, 2022</div>
         </div>
       
       
@@ -457,9 +425,9 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2022/11/09/redis/(%E4%B8%80)redis%20%E5%BA%95%E5%B1%82%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/" title="(一)redis 底层数据结构">
+                      <a href="/2022/11/11/redis/(%E4%B8%83)redis%20gossip%20%E5%8D%8F%E8%AE%AE/" title="(七)redis gossip 协议">
                         <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">(一)redis 底层数据结构</span>
+                        <span class="hidden-mobile">(七)redis gossip 协议</span>
                         <span class="visible-mobile">Previous</span>
                       </a>
                     
@@ -467,8 +435,8 @@
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2022/11/07/mysql/(%E5%8D%81%E4%BA%94)mysql%20%E4%B8%80%E4%B8%BB%E5%A4%9A%E4%BB%8E%E5%A6%82%E4%BD%95%E8%BF%9B%E8%A1%8C%E4%B8%BB%E4%BB%8E%E5%88%87%E6%8D%A2/" title="(十五)mysql 一主多从如何进行主从切换">
-                        <span class="hidden-mobile">(十五)mysql 一主多从如何进行主从切换</span>
+                      <a href="/2022/11/11/redis/(%E4%BA%94)redis%20%E5%93%A8%E5%85%B5%E6%A8%A1%E5%BC%8F/" title="(四)redis 哨兵模式">
+                        <span class="hidden-mobile">(四)redis 哨兵模式</span>
                         <span class="visible-mobile">Next</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
