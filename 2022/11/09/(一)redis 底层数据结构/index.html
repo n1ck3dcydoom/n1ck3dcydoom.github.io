@@ -16,16 +16,16 @@
   <meta name="author" content="n!Ck">
   <meta name="keywords" content="">
   
-    <meta name="description" content="redis 对外提供的上层数据结构 String List Hash Set Sorted Set  这五大基本类型是 redis 对外提供的数据结构,在底层 redis 分别有自己实现的底层数据结构去对应这些基本类型,分别是:  简单动态字符串 压缩列表 双向链表 哈希表 跳表 整数数组  简单动态字符串 (SDS)SDS 并不是一个简单的以 \0 结尾的字符数组,而是一个有着相对复杂结构的抽象">
+    <meta name="description" content="redis 对外提供的上层数据结构 String List Hash Set Sorted Set  这五大基本类型是 redis 对外提供的数据结构,在底层 redis 分别有自己实现的底层数据结构去对应这些基本类型,分别是:  简单动态字符串 压缩列表 双向链表 哈希表 跳表 整数数组  redis 所有的 kv 通过什么形式组织redis 内部维护了一个巨大的 hash 表,这个 hash">
 <meta property="og:type" content="article">
 <meta property="og:title" content="(一)redis 底层数据结构">
 <meta property="og:url" content="https://n1ck.cyou/2022/11/09/(%E4%B8%80)redis%20%E5%BA%95%E5%B1%82%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/index.html">
 <meta property="og:site_name" content="n!Ck playground">
-<meta property="og:description" content="redis 对外提供的上层数据结构 String List Hash Set Sorted Set  这五大基本类型是 redis 对外提供的数据结构,在底层 redis 分别有自己实现的底层数据结构去对应这些基本类型,分别是:  简单动态字符串 压缩列表 双向链表 哈希表 跳表 整数数组  简单动态字符串 (SDS)SDS 并不是一个简单的以 \0 结尾的字符数组,而是一个有着相对复杂结构的抽象">
+<meta property="og:description" content="redis 对外提供的上层数据结构 String List Hash Set Sorted Set  这五大基本类型是 redis 对外提供的数据结构,在底层 redis 分别有自己实现的底层数据结构去对应这些基本类型,分别是:  简单动态字符串 压缩列表 双向链表 哈希表 跳表 整数数组  redis 所有的 kv 通过什么形式组织redis 内部维护了一个巨大的 hash 表,这个 hash">
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="https://n1ck.cyou/img/redis.png">
 <meta property="article:published_time" content="2022-11-09T01:25:39.000Z">
-<meta property="article:modified_time" content="2022-11-10T00:36:59.090Z">
+<meta property="article:modified_time" content="2022-11-15T00:52:16.263Z">
 <meta property="article:author" content="n!Ck">
 <meta property="article:tag" content="redis">
 <meta name="twitter:card" content="summary_large_image">
@@ -221,7 +221,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          4.3k words
+          4k words
         
       </span>
     
@@ -232,7 +232,7 @@
         
         
         
-          36 mins
+          34 mins
         
       </span>
     
@@ -291,6 +291,11 @@
 <li>跳表</li>
 <li>整数数组</li>
 </ol>
+<h3 id="redis-所有的-kv-通过什么形式组织"><a href="#redis-所有的-kv-通过什么形式组织" class="headerlink" title="redis 所有的 kv 通过什么形式组织"></a>redis 所有的 kv 通过什么形式组织</h3><p>redis 内部维护了一个巨大的 <code>hash</code> 表,这个 <code>hash</code> 表记录了实例里面的所有键值对</p>
+<p>这个巨大的 <code>hash</code> 表其实就是一个数组,而数组每个元素都是一个 <code>hash</code> 桶,每个 <code>hash</code> 桶里面才保存了键值对数据</p>
+<p>每个 <code>hash</code> 桶内其实也不是保存的真正的键值对,而是维护的指向键值对的指针,即 <code>*key</code> 和 <code>*value</code></p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7zqfxowfbj30j609dgnk.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
+<p>全局哈希表可以在 <code>O(1)</code> 的时间内快速查找到对应的键值对,只需要由 <code>hash</code> 函数计算出 <code>key</code> 的位置就能找到 <code>hash</code> 桶的位置,然后访问 <code>hash</code> 桶内的 <code>*value</code> 指针即可找到对应的值</p>
 <h4 id="简单动态字符串-SDS"><a href="#简单动态字符串-SDS" class="headerlink" title="简单动态字符串 (SDS)"></a>简单动态字符串 (SDS)</h4><p><code>SDS</code> 并不是一个简单的以 <code>\0</code> 结尾的字符数组,而是一个有着相对复杂结构的抽象类型,并且支持动态扩展</p>
 <p>一个 <code>SDS</code> 的结构如下:</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">sdshdr</span> &#123;</span><br>    <span class="hljs-comment">// 记录buf数组中已使用字节的数量，即SDS所保存字符串的长度</span><br>    <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> len;<br>    <span class="hljs-comment">// 记录buf数据中未使用的字节数量</span><br>    <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> <span class="hljs-built_in">free</span>;<br>    <span class="hljs-comment">// 字节数组，用于保存字符串</span><br>    <span class="hljs-type">char</span> buf[];<br>&#125;;<br></code></pre></td></tr></table></figure>
@@ -368,10 +373,11 @@
 <p>而作为有序集合,其性质本身保证了有序,对于有序的查找,使用二分查找能加快查找进度</p>
 <p>跳表在原来一层链表的基础上,引入了多层索引结构,每次从最高层最左端开始查找,其查找过程类似于二分查找</p>
 <p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7zqfs56nnj30k60cqq53.jpg" srcset="/img/loading.gif" lazyload alt="img_5.png"></p>
-<p>在 redis 的实际运用当中,跳表 <code>zskiplist</code> 由指向头部的指针 <code>*header</code>, 指向尾部的指针 <code>*tail</code>, 当前跳表内最高的节点层数(表头节点不算), 当前跳表的长度(即节点个数,表头节点不算) </p>
-<p>每个跳表节点 <code>zskiplistNode</code> 的结构组成如下:</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">zskiplistNode</span> &#123;</span><br>    <span class="hljs-comment">// 后退指针</span><br>    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">zskiplistNode</span> *<span class="hljs-title">backward</span>;</span><br>    <span class="hljs-comment">// 分值</span><br>    <span class="hljs-type">double</span> score;<br>    <span class="hljs-comment">// 成员对象</span><br>    obj *obj;<br>    <span class="hljs-comment">// 层</span><br>    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">zskiplistLevel</span> &#123;</span><br>        <span class="hljs-comment">// 前进指针</span><br>        <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">zskiplistNode</span> *<span class="hljs-title">forward</span>;</span><br>        <span class="hljs-comment">// 跨度</span><br>        <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> span;<br>    &#125; level[];<br>&#125; zskiplistNode;<br></code></pre></td></tr></table></figure>
+<p>在 redis 的实际运用当中,跳表 <code>zskiplist</code> 由指向头部的指针 <code>*header</code>, 指向尾部的指针 <code>*tail</code>, 当前跳表内最高的节点层数(表头节点不算) <code>level</code>, 当前跳表的长度(即节点个数,表头节点不算) <code>length</code></p>
+<p>跳表的结构定义如下:</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/* ZSETs use a specialized version of Skiplists */</span><br><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">zskiplistNode</span> &#123;</span><br>    sds ele;  <span class="hljs-comment">// 跳表节点保存的数据,一个 SDS 简单动态字符串</span><br>    <span class="hljs-type">double</span> score;<br>    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">zskiplistNode</span> *<span class="hljs-title">backward</span>;</span>  <span class="hljs-comment">// 当前节点的前驱节点</span><br>    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">zskiplistLevel</span> &#123;</span>  <span class="hljs-comment">// 当前节点所属的层级</span><br>        <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">zskiplistNode</span> *<span class="hljs-title">forward</span>;</span><br>        <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> span;<br>    &#125; level[];<br>&#125; zskiplistNode;<br><br><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">zskiplist</span> &#123;</span><br>    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">zskiplistNode</span> *<span class="hljs-title">header</span>, *<span class="hljs-title">tail</span>;</span><br>    <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> length;<br>    <span class="hljs-type">int</span> level;<br>&#125; zskiplist;<br></code></pre></td></tr></table></figure>
 
+<p><code>zskiplist</code> 跳表定义了两个指针,分别指向跳表的头部 <code>*header</code> 和尾部 <code>*tail</code> ,类型是跳表节点 <code>zskiplistNode</code></p>
 <p><code>level[]</code> 表示当前节点在哪些层里面出现,例如上图的节点 <code>o1</code> 就出现在 <code>L1,L2,L3,L4</code> 当中,而节点 <code>o2</code> 自出现在 <code>L1,L2</code> 当中</p>
 <p><code>obj</code> 跳表节点存储的实际数据</p>
 <p><code>*backward</code> 后退指针,当检索跳表节点时,若发现当前节点大于检索值,则需要后退并且进入下一层检索</p>
@@ -382,16 +388,6 @@
 <p>跳表插入节点时,如果数据比较几种,可能会退化成一条单链表; 所以必须在插入时更新节点的层数,redis 通过一个随机函数来决定插入节点在下一层是否应该继续插入,每次进入下一层的概率大概为 <code>1/4</code></p>
 <p>为何 redis 选用跳表而不是红黑树</p>
 <p>因为红黑树在做插入和删除时,涉及到树的旋转,其效率并不如跳表操作指针高; 而且在查询效率上分布均匀的跳表和红黑树几乎没有区别</p>
-<h3 id="redis-所有的-kv-通过什么形式组织"><a href="#redis-所有的-kv-通过什么形式组织" class="headerlink" title="redis 所有的 kv 通过什么形式组织"></a>redis 所有的 kv 通过什么形式组织</h3><p>redis 内部维护了一个巨大的 <code>hash</code> 表,这个 <code>hash</code> 表记录了实例里面的所有键值对</p>
-<p>这个巨大的 <code>hash</code> 表其实就是一个数组,而数组每个元素都是一个 <code>hash</code> 桶,每个 <code>hash</code> 桶里面才保存了键值对数据</p>
-<p>每个 <code>hash</code> 桶内其实也不是保存的真正的键值对,而是维护的指向键值对的指针,即 <code>*key</code> 和 <code>*value</code></p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7zqfxowfbj30j609dgnk.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
-<p>全局哈希表可以在 <code>O(1)</code> 的时间内快速查找到对应的键值对,只需要由 <code>hash</code> 函数计算出 <code>key</code> 的位置就能找到 <code>hash</code> 桶的位置,然后访问 <code>hash</code> 桶内的 <code>*value</code> 指针即可找到对应的值</p>
-<p>跳表的结构定义如下:</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">/* ZSETs use a specialized version of Skiplists */</span><br><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">zskiplistNode</span> &#123;</span><br>    sds ele;  <span class="hljs-comment">// 跳表节点保存的数据,一个 SDS 简单动态字符串</span><br>    <span class="hljs-type">double</span> score;<br>    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">zskiplistNode</span> *<span class="hljs-title">backward</span>;</span>  <span class="hljs-comment">// 当前节点的前驱节点</span><br>    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">zskiplistLevel</span> &#123;</span>  <span class="hljs-comment">// 当前节点所属的层级</span><br>        <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">zskiplistNode</span> *<span class="hljs-title">forward</span>;</span><br>        <span class="hljs-type">unsigned</span> <span class="hljs-type">int</span> span;<br>    &#125; level[];<br>&#125; zskiplistNode;<br><br><span class="hljs-keyword">typedef</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">zskiplist</span> &#123;</span><br>    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">zskiplistNode</span> *<span class="hljs-title">header</span>, *<span class="hljs-title">tail</span>;</span><br>    <span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> length;<br>    <span class="hljs-type">int</span> level;<br>&#125; zskiplist;<br></code></pre></td></tr></table></figure>
-
-<p><code>zskiplist</code> 跳表定义了两个指针,分别指向跳表的头部 <code>*header</code> 和尾部 <code>*tail</code> ,类型是跳表节点 <code>zskiplistNode</code></p>
-<p><code>zskiplistNode</code> 跳表节点由一下</p>
 
                 
               </div>

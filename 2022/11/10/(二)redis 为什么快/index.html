@@ -25,7 +25,7 @@
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="https://n1ck.cyou/img/redis.png">
 <meta property="article:published_time" content="2022-11-10T00:38:07.000Z">
-<meta property="article:modified_time" content="2022-11-10T01:23:06.623Z">
+<meta property="article:modified_time" content="2022-11-15T01:30:17.606Z">
 <meta property="article:author" content="n!Ck">
 <meta property="article:tag" content="redis">
 <meta name="twitter:card" content="summary_large_image">
@@ -221,7 +221,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          1.6k words
+          2.5k words
         
       </span>
     
@@ -232,7 +232,7 @@
         
         
         
-          14 mins
+          21 mins
         
       </span>
     
@@ -317,6 +317,30 @@
 <p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7zrs431btj30io0chq61.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
 <p>可以看到,redis 的 IO 进程其实就是在不断的处理 <code>epoll_create</code> 创建的 <code>epoll</code> 实例的就绪队列,每个就绪的文件描述符因为有 <code>epoll_wati</code> 的调用,都记录了监听的事件和对应的回调函数</p>
 <p>当 redis 的 IO 进程拿到就绪的文件描述符之后,可以直接调用对应的回调函数进行请求的处理; 并且不会阻塞在某一个请求上,而是可以继续处理队列里下一个就绪的请求</p>
+<h3 id="Linux-零拷贝技术"><a href="#Linux-零拷贝技术" class="headerlink" title="Linux 零拷贝技术"></a>Linux 零拷贝技术</h3><p>一次常规的读取数据后写盘操作,其流程如下:</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h85k2i93wyj30g808h404.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
+<ol>
+<li>用户态发起 <code>read()</code> 陷入内核态,内核态发起 IO 请求,读取磁盘中的数据  <code>(第一次上下文切换)</code></li>
+<li>CPU 将磁盘当中的数据复制到内核缓冲区  <code>(第一次数据拷贝)</code></li>
+<li>CPU 将内核缓冲区当中的数据复制到用户缓冲区,从内核态切换到用户态  <code>(第二次上下文切换,第二次数据拷贝)</code></li>
+<li>进程处理用户缓冲区内的数据</li>
+<li>用户态发起 <code>write()</code> 陷入内核态,内核态将用户缓冲区的的数据拷贝到内核缓冲区  <code>(第三次上下文切换,第三次数据拷贝)</code></li>
+<li>内核态将内核缓冲区内的数据,拷贝到网卡的套接字缓冲区 <code>(第四次数据拷贝)</code></li>
+<li>内核态完成 <code>write()</code> 调用,返回用户态 <code>(第四次上下文切换)</code></li>
+</ol>
+<p>可以看到一次普通的读盘后写盘操作,需要四次上下文切换,四次数据拷贝,而让宝贵的 CPU 去进行数据拷贝这样的阻塞操作,是很难接受的</p>
+<p>引入 <code>DMA</code> 总线控制器后,CPU 就不再直接参与磁盘的读取和数据拷贝了,而是通过 <code>DMA</code> 的完成事件通知异步的将磁盘缓冲区内的数据拷贝到内核缓冲区</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h85k2p62j6j30id0bzq51.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
+<p>对于上下文切换和拷贝次数并没有优化,仅仅是把 CPU 从阻塞的磁盘 IO 中解放出来可以继续做其他计算工作</p>
+<h4 id="虚拟内存映射-mmap"><a href="#虚拟内存映射-mmap" class="headerlink" title="虚拟内存映射 mmap"></a>虚拟内存映射 mmap</h4><p>Linux 提供了一种内存映射的机制,可以把内核缓冲区所在的地址空间与用户缓冲区所在的地址空间进行一次映射,这个技术使得 <code>用户态可以直接访问内核缓冲区内的数据</code></p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h85k2uq1bfj30ip0caad7.jpg" srcset="/img/loading.gif" lazyload alt="img_2.png"></p>
+<p>虚拟地址映射时,有两次上下文切换 <code>(用户态调用 write 和 write 调用返回内核态)</code>,一次 CPU 拷贝,两次 DMA 拷贝</p>
+<h4 id="sendfile"><a href="#sendfile" class="headerlink" title="sendfile"></a>sendfile</h4><p>Linux 2.1 版本以后还提供了 <code>sendfile</code> 的方式,可以进一步减少拷贝次数,但问题就是由于 <code>sendfile</code> 不经过用户态,所以无法修改数据只能进行数据发送</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h85k301thaj30hy0bt40s.jpg" srcset="/img/loading.gif" lazyload alt="img_3.png"></p>
+<p>在 <code>sendfile</code> 函数调用下,仅有两次上下文切换 <code>(用户态调用 sendfile 和 sendfile 调用返回用户态)</code>,一次 CPU 拷贝,两次 DMA 拷贝</p>
+<h4 id="sendfile-DMA-直接拷贝"><a href="#sendfile-DMA-直接拷贝" class="headerlink" title="sendfile + DMA 直接拷贝"></a>sendfile + DMA 直接拷贝</h4><p>Linux 2.4 以后,对 <code>sendfile</code> 进行了优化,进一步减少了 CPU 的拷贝次数; <code>DMA</code> 通过记录内核缓冲区内的地址和偏移量,直接将数据拷贝到网卡缓冲内</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h85k34q0uuj30if0bhwgy.jpg" srcset="/img/loading.gif" lazyload alt="img_4.png"></p>
+<p>可以看到本质还是 <code>sendfile</code> 所以仍然无法进行数据修改</p>
 
                 
               </div>
