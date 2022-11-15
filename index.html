@@ -221,6 +221,73 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2022/11/15/(%E4%BA%8C)jvm%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E6%9C%BA%E5%88%B6/" target="_self">
+          <img src="/img/java.png" srcset="/img/loading.gif" lazyload alt="(二)jvm 垃圾回收机制">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2022/11/15/(%E4%BA%8C)jvm%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E6%9C%BA%E5%88%B6/" target="_self">
+          (二)jvm 垃圾回收机制
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt " href="/2022/11/15/(%E4%BA%8C)jvm%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E6%9C%BA%E5%88%B6/" target="_self">
+        <div>
+          jvm 那些地方需要垃圾回收对于 程序计数器 虚拟机栈 本地方法栈 这三个地方,随着线程的创建而产生,又随着线程的销毁而灭; 里面的数据随着线程的执行能够保证符合预期,且这些结构在类结构确定下来之后就能随之敲定 这三个区域的回收是具有确定性的,当线程销毁时,自然也可简单的将之前分配给线程的区域进行回收; 无需太关注这三个部分的垃圾回收 而对于 堆 方法区 这两个地方,有着很不一样的不确定性:类或者
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-11-15 12:56" pubdate>
+              2022-11-15
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/jvm/" class="category-chain-item">jvm</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/jvm/">#jvm</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+      <div class="col-12 col-md-4 m-auto index-img">
         <a href="/2022/11/15/(%E4%B8%80)jvm%20%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B/" target="_self">
           <img src="/img/java.png" srcset="/img/loading.gif" lazyload alt="(一)jvm 内存模型">
         </a>
@@ -782,73 +849,6 @@
           <div class="post-meta mr-3">
             <i class="iconfont icon-date"></i>
             <time datetime="2022-11-12 12:25" pubdate>
-              2022-11-12
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3 d-flex align-items-center">
-            <i class="iconfont icon-category"></i>
-            
-
-<span class="category-chains">
-  
-  
-    
-      <span class="category-chain">
-        
-  <a href="/categories/redis/" class="category-chain-item">redis</a>
-  
-  
-
-      </span>
-    
-  
-</span>
-
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/redis/">#redis</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-      <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/12/redis/(%E5%85%AB)redis%20%E7%BB%9F%E8%AE%A1%20key/" target="_self">
-          <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(八)redis 统计 key">
-        </a>
-      </div>
-    
-    <article class="col-12 col-md-8 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2022/11/12/redis/(%E5%85%AB)redis%20%E7%BB%9F%E8%AE%A1%20key/" target="_self">
-          (八)redis 统计 key
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt " href="/2022/11/12/redis/(%E5%85%AB)redis%20%E7%BB%9F%E8%AE%A1%20key/" target="_self">
-        <div>
-          统计能力在实际业务场景当中,redis 出了当做缓存使用; 还经常做的事就是统计各种 key 相关的数据 例如:  app 的登录用户 电商网站的评论,点赞,点踩等能力 app 的签到场景  由于实际业务场景当中的请求量或者说用户规模都是巨大的,针对不同的场景选择合适的数据结构去保存这些行为数据是很值得优化的 集合的常用统计模式 聚合统计 排序统计 二值状态统计 基数统计  将业务场景里面的统计需
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2022-11-12 11:34" pubdate>
               2022-11-12
             </time>
           </div>

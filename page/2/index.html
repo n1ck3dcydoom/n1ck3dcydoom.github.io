@@ -221,6 +221,73 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2022/11/12/redis/(%E5%85%AB)redis%20%E7%BB%9F%E8%AE%A1%20key/" target="_self">
+          <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(八)redis 统计 key">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2022/11/12/redis/(%E5%85%AB)redis%20%E7%BB%9F%E8%AE%A1%20key/" target="_self">
+          (八)redis 统计 key
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt " href="/2022/11/12/redis/(%E5%85%AB)redis%20%E7%BB%9F%E8%AE%A1%20key/" target="_self">
+        <div>
+          统计能力在实际业务场景当中,redis 出了当做缓存使用; 还经常做的事就是统计各种 key 相关的数据 例如:  app 的登录用户 电商网站的评论,点赞,点踩等能力 app 的签到场景  由于实际业务场景当中的请求量或者说用户规模都是巨大的,针对不同的场景选择合适的数据结构去保存这些行为数据是很值得优化的 集合的常用统计模式 聚合统计 排序统计 二值状态统计 基数统计  将业务场景里面的统计需
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-11-12 11:34" pubdate>
+              2022-11-12
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/redis/" class="category-chain-item">redis</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/redis/">#redis</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+      <div class="col-12 col-md-4 m-auto index-img">
         <a href="/2022/11/11/redis/(%E4%B8%83)redis%20gossip%20%E5%8D%8F%E8%AE%AE/" target="_self">
           <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(七)redis gossip 协议">
         </a>
@@ -782,73 +849,6 @@
           <div class="post-meta mr-3">
             <i class="iconfont icon-date"></i>
             <time datetime="2022-11-07 13:18" pubdate>
-              2022-11-07
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3 d-flex align-items-center">
-            <i class="iconfont icon-category"></i>
-            
-
-<span class="category-chains">
-  
-  
-    
-      <span class="category-chain">
-        
-  <a href="/categories/mysql/" class="category-chain-item">mysql</a>
-  
-  
-
-      </span>
-    
-  
-</span>
-
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/mysql/">#mysql</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-      <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/07/mysql/(%E5%8D%81%E5%9B%9B)mysql%20%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E9%AB%98%E5%8F%AF%E7%94%A8/" target="_self">
-          <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(十四)mysql 如何保证高可用">
-        </a>
-      </div>
-    
-    <article class="col-12 col-md-8 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2022/11/07/mysql/(%E5%8D%81%E5%9B%9B)mysql%20%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E9%AB%98%E5%8F%AF%E7%94%A8/" target="_self">
-          (十四)mysql 如何保证高可用
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt " href="/2022/11/07/mysql/(%E5%8D%81%E5%9B%9B)mysql%20%E5%A6%82%E4%BD%95%E4%BF%9D%E8%AF%81%E9%AB%98%E5%8F%AF%E7%94%A8/" target="_self">
-        <div>
-          双 M 结构双 M 主从切换是目前比较常用的结构,这种结构使得数据库之间互相进行同步,通过属性 readonly 来决定逻辑上的主库  主从延迟mysql 在做主从同步的时候,有几个关键的时间点如下:  主库执行完成一个事务,写入 binlog 这个时间点记为 T1 主库通过 dump_thread 将 binlog 发送给备库,备库通过 io_thread 将接收到的 binlog 写入中转日志
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2022-11-07 09:27" pubdate>
               2022-11-07
             </time>
           </div>
