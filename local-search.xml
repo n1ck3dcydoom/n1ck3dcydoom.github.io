@@ -4,6 +4,31 @@
   
   
   <entry>
+    <title>(一)jvm 内存模型</title>
+    <link href="/2022/11/15/(%E4%B8%80)jvm%20%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B/"/>
+    <url>/2022/11/15/(%E4%B8%80)jvm%20%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B/</url>
+    
+    <content type="html"><![CDATA[<h3 id="jvm-的内存模型"><a href="#jvm-的内存模型" class="headerlink" title="jvm 的内存模型"></a>jvm 的内存模型</h3><p>jvm 内存模型由以下几个部分组成</p><ul><li>方法区 method</li><li>堆 heap</li><li>虚拟机栈 vm stack</li><li>本地方法栈 native method stack</li><li>程序计数器 program counter (pc)</li></ul><p>其中方法区和堆是所有线程共享的,而虚拟机栈,本地方法栈和程序计数器则是每个线程独有的</p><h4 id="程序计数器"><a href="#程序计数器" class="headerlink" title="程序计数器"></a>程序计数器</h4><p>程序计数器的作用就是标记当前线程执行到的字节码行号; 当时间片轮转导致线程上下文切换或者进入循环分支等流程,都需要通过程序计数器来控制</p><h4 id="虚拟机栈"><a href="#虚拟机栈" class="headerlink" title="虚拟机栈"></a>虚拟机栈</h4><p>虚拟机栈用于保存,每个方法在运行时 jvm 创建的 <code>栈帧</code> ,而 <code>栈帧</code> 则是用于保存方法需要的本地变量等信息; 一个方法的执行和返回,就对应了线程里面虚拟机栈 <code>栈帧</code> 的入栈和出栈</p><p>当虚拟机栈超过一定深度之后,就会引发 <code>StackOverflow</code> 异常; 或者申请分配 <code>栈帧</code> 时所需要的内存不够,就会引发 <code>OutOfMemory</code> 异常</p><h4 id="本地方法栈"><a href="#本地方法栈" class="headerlink" title="本地方法栈"></a>本地方法栈</h4><p>区域别类里面的方法,本地方法栈保存的是 jvm 需要使用的 <code>native</code> 方法</p><h4 id="堆"><a href="#堆" class="headerlink" title="堆"></a>堆</h4><p>虚拟机里面所有对象的创建都是在堆空间上直接分配的; 包括后面的垃圾回收过程也几乎都是运行在堆空间上</p><p>当对空间不足以分配实例的所需的内存是,会引发 <code>OOM</code> 异常</p><h4 id="方法区"><a href="#方法区" class="headerlink" title="方法区"></a>方法区</h4><p>方法区也是所有线程共享的一块区域,里面保存了 jvm 启动时加载的各种静态变量,静态方法,静态实例等; 还有各种常量,类加载信息都会保存在方法区内</p><p>与堆进行区分,也称作 <code>非堆区</code> 或者叫做 <code>永久代</code> ,在后面的 jdk 发展过程当中 <code>永久代</code> 慢慢被废弃,直到 <code>本地内存</code>  <code>元空间</code> 将其完全替代</p>]]></content>
+    
+    
+    <categories>
+      
+      <category>jvm</category>
+      
+    </categories>
+    
+    
+    <tags>
+      
+      <tag>jvm</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
+  <entry>
     <title>(十六)redis 数据倾斜和访问倾斜</title>
     <link href="/2022/11/14/redis/(%E5%8D%81%E5%85%AD)redis%20%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C%E5%92%8C%E8%AE%BF%E9%97%AE%E5%80%BE%E6%96%9C/"/>
     <url>/2022/11/14/redis/(%E5%8D%81%E5%85%AD)redis%20%E6%95%B0%E6%8D%AE%E5%80%BE%E6%96%9C%E5%92%8C%E8%AE%BF%E9%97%AE%E5%80%BE%E6%96%9C/</url>
