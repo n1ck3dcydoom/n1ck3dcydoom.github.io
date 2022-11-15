@@ -4,6 +4,31 @@
   
   
   <entry>
+    <title>(四)jvm 语法糖</title>
+    <link href="/2022/11/15/(%E5%9B%9B)jvm%20%E8%AF%AD%E6%B3%95%E7%B3%96/"/>
+    <url>/2022/11/15/(%E5%9B%9B)jvm%20%E8%AF%AD%E6%B3%95%E7%B3%96/</url>
+    
+    <content type="html"><![CDATA[<h3 id="泛型"><a href="#泛型" class="headerlink" title="泛型"></a>泛型</h3><p>泛型的本质是参数类型化或者参数多态化; 即可以将操作数类型指定为一种特殊类型,在真正运行时能够被解析回实际的类型</p><h3 id="泛型的类型擦除"><a href="#泛型的类型擦除" class="headerlink" title="泛型的类型擦除"></a>泛型的类型擦除</h3><p>在编译时 <code>List&lt;String&gt;</code> 和 <code>List&lt;Integer&gt;</code> 两个泛型会被替换为 <code>裸类型 Raw Type</code> ,因此对于 java 来说  <code>List&lt;String&gt;</code> 和 <code>List&lt;Integer&gt;</code> 在运行时其实就是同一个类型 <code>List</code> ,这就是 <code>类型擦除</code></p><p><code>类型擦除</code> 被当做一个 java 的语法糖,在实际运行时需要由 jvm 将其还原为支持不同类型的语法</p><ol><li>让 <code>ArrayList&lt;String&gt;</code> 成为 <code>ArrayList</code> 的子类</li><li>通过类型擦除让 <code>ArrayList&lt;String&gt;</code> 还原为裸类型 <code>ArrayList</code> ,在实际操作时加入强制类型转换,将 <code>Object</code> 转换为 <code>String</code> 类型</li></ol><p><code>类型擦除</code> 带来的麻烦,这使得泛型不支持基本类型,例如 <code>ArrayList&lt;int&gt;</code> 或者 <code>List&lt;long&gt;</code> 都是不合法的</p><p>因为 java 不支持 <code>int</code> <code>long</code> 与 <code>Object</code> 之间的转换</p><p>为了能够让基本类型支持泛型,java 不得已又引入了新的语法糖 <code>自动装箱</code> 和 <code>自动拆箱</code></p><p>简单来说,如果要使用 <code>List&lt;long&gt;</code> 就干脆使用 <code>List&lt;Long&gt;</code> 替换,只不过在运行自动的将包装类拆箱为基本类,将基本类装箱为包装类</p><p>这就成为了 java 泛型性能低下的根本原因,引入了大量的自动装箱和拆箱的额外操作</p><p>而且由于 <code>类型擦除</code> jvm 在运行时无法获得实际的类型,因为泛型全部变成了裸类型</p><h3 id="自动拆箱-自动装箱-增强-for-循环-变长参数"><a href="#自动拆箱-自动装箱-增强-for-循环-变长参数" class="headerlink" title="自动拆箱,自动装箱,增强 for 循环,变长参数"></a>自动拆箱,自动装箱,增强 for 循环,变长参数</h3><ul><li>自动拆箱: 编译后会被还原为对应的拆箱方法 <code>Integer.intValue()</code></li><li>自动装箱: 编译后会被还原为对应的装箱方法 <code>Intger.valueOf()</code></li><li>增强 for 循环: 即 <code>for(int n: nums)</code> 编译后会被还原为迭代器遍历,其实这就是为什么增强 for 循环要求循环的对象必须实现 <code>Iterable</code> 接口,而且对于基本类型的增强 for 循环,还会被自动装箱为包装类</li><li>变长参数: 即 <code>foo(...String)</code> 编译后会被还原为一个 <code>String[]</code> 的参数</li></ul><p>自动拆箱和自动装箱引起的 bug</p><p>对于包装类 <code>Integer</code> 在做 <code>==</code> 判断的时候,不会自动拆箱,以及 <code>equals()</code> 方法也不会处理数据转换的问题</p><h3 id="条件编译"><a href="#条件编译" class="headerlink" title="条件编译"></a>条件编译</h3><p>jvm 会在编译 <code>if</code> 语句时时判断一些布尔表达式的结果,把那些永远不可达的语句去掉</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span> &#123; <br>    <span class="hljs-keyword">if</span> (<span class="hljs-literal">true</span>) &#123; <br>        System.out.println(<span class="hljs-string">&quot;block 1&quot;</span>); <br>    &#125; <span class="hljs-keyword">else</span> &#123; <br>        System.out.println(<span class="hljs-string">&quot;block 2&quot;</span>); <br>    &#125; <br>&#125;<br></code></pre></td></tr></table></figure><p>在编译后就只有一条语句了</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span>&#123;<br>    System.out.println(<span class="hljs-string">&quot;block 1&quot;</span>);<br>&#125;<br></code></pre></td></tr></table></figure><p>除了 <code>if</code> 以外其他的条件判断语句,如果出现永远不可达的语句则会直接拒绝编译</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs java"><span class="hljs-keyword">public</span> stataic <span class="hljs-keyword">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">(String[] args)</span> &#123;<br>    <span class="hljs-comment">// Unreachable code</span><br>    <span class="hljs-keyword">while</span> (<span class="hljs-literal">false</span>)&#123;<br>        System.out.println(<span class="hljs-string">&quot;block 3&quot;</span>);<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure><p>此时编译会直接报错</p><h3 id="其他语法糖"><a href="#其他语法糖" class="headerlink" title="其他语法糖"></a>其他语法糖</h3><p>最常用的几个就是 <code>try-catch-resource</code> 语法糖,对于那些实现了 <code>CloseAble</code> 接口的资源,可以通过 <code>try-catch-resource</code> 语法糖来避免大量的 <code>catch</code> 关闭资源的操作</p><p>还有就是 <code>switch</code> 操作支持字符串和枚举值,这也是语法糖</p>]]></content>
+    
+    
+    <categories>
+      
+      <category>jvm</category>
+      
+    </categories>
+    
+    
+    <tags>
+      
+      <tag>jvm</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
+  <entry>
     <title>(三)jvm 类加载过程</title>
     <link href="/2022/11/15/(%E4%B8%89)jvm%20%E7%B1%BB%E5%8A%A0%E8%BD%BD%E8%BF%87%E7%A8%8B/"/>
     <url>/2022/11/15/(%E4%B8%89)jvm%20%E7%B1%BB%E5%8A%A0%E8%BD%BD%E8%BF%87%E7%A8%8B/</url>

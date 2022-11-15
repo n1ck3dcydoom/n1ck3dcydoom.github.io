@@ -221,6 +221,73 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2022/11/15/(%E5%9B%9B)jvm%20%E8%AF%AD%E6%B3%95%E7%B3%96/" target="_self">
+          <img src="/img/java.png" srcset="/img/loading.gif" lazyload alt="(四)jvm 语法糖">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2022/11/15/(%E5%9B%9B)jvm%20%E8%AF%AD%E6%B3%95%E7%B3%96/" target="_self">
+          (四)jvm 语法糖
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt " href="/2022/11/15/(%E5%9B%9B)jvm%20%E8%AF%AD%E6%B3%95%E7%B3%96/" target="_self">
+        <div>
+          泛型泛型的本质是参数类型化或者参数多态化; 即可以将操作数类型指定为一种特殊类型,在真正运行时能够被解析回实际的类型 泛型的类型擦除在编译时 List&lt;String&gt; 和 List&lt;Integer&gt; 两个泛型会被替换为 裸类型 Raw Type ,因此对于 java 来说  List&lt;String&gt; 和 List&lt;Integer&gt; 在运行时其实就是同
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-11-15 17:27" pubdate>
+              2022-11-15
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/jvm/" class="category-chain-item">jvm</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/jvm/">#jvm</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+      <div class="col-12 col-md-4 m-auto index-img">
         <a href="/2022/11/15/(%E4%B8%89)jvm%20%E7%B1%BB%E5%8A%A0%E8%BD%BD%E8%BF%87%E7%A8%8B/" target="_self">
           <img src="/img/java.png" srcset="/img/loading.gif" lazyload alt="(三)jvm 类加载过程">
         </a>
@@ -820,78 +887,11 @@
     </article>
   </div>
 
-  <div class="row mx-auto index-card">
-    
-    
-      <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/12/redis/(%E5%8D%81)redis%20%E6%97%81%E8%B7%AF%E7%BC%93%E5%AD%98/" target="_self">
-          <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(十)redis 旁路缓存">
-        </a>
-      </div>
-    
-    <article class="col-12 col-md-8 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2022/11/12/redis/(%E5%8D%81)redis%20%E6%97%81%E8%B7%AF%E7%BC%93%E5%AD%98/" target="_self">
-          (十)redis 旁路缓存
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt " href="/2022/11/12/redis/(%E5%8D%81)redis%20%E6%97%81%E8%B7%AF%E7%BC%93%E5%AD%98/" target="_self">
-        <div>
-          将 redis 当做旁路缓存使用在业务客户端和数据库持久层中间,加上 redis,此时 redis 就以旁路缓存的身份提供服务 作为缓存使用的redis 有两种方式  只读缓存 读写缓存  只读缓存redis 只提供读请求,所有的写请求都直接打到数据库 对于删除操作,当删除数据库的记录后,还需要删除 redis 里面保存的记录,以免下次又从缓存里面读到了 对于读请求,如果没有命中 redis 缓存
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2022-11-12 19:59" pubdate>
-              2022-11-12
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3 d-flex align-items-center">
-            <i class="iconfont icon-category"></i>
-            
-
-<span class="category-chains">
-  
-  
-    
-      <span class="category-chain">
-        
-  <a href="/categories/redis/" class="category-chain-item">redis</a>
-  
-  
-
-      </span>
-    
-  
-</span>
-
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/redis/">#redis</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
 
 
   <nav aria-label="navigation">
     <span class="pagination" id="pagination">
-      <span class="page-number current">1</span><a class="page-number" href="/page/2/#board">2</a><a class="page-number" href="/page/3/#board">3</a><a class="page-number" href="/page/4/#board">4</a><a class="extend next" rel="next" href="/page/2/#board"><i class="iconfont icon-arrowright"></i></a>
+      <span class="page-number current">1</span><a class="page-number" href="/page/2/#board">2</a><a class="page-number" href="/page/3/#board">3</a><span class="space">&hellip;</span><a class="page-number" href="/page/5/#board">5</a><a class="extend next" rel="next" href="/page/2/#board"><i class="iconfont icon-arrowright"></i></a>
     </span>
   </nav>
 
