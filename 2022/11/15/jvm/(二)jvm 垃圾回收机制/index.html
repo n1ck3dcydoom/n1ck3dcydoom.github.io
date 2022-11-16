@@ -19,7 +19,7 @@
     <meta name="description" content="jvm 那些地方需要垃圾回收对于 程序计数器 虚拟机栈 本地方法栈 这三个地方,随着线程的创建而产生,又随着线程的销毁而灭; 里面的数据随着线程的执行能够保证符合预期,且这些结构在类结构确定下来之后就能随之敲定 这三个区域的回收是具有确定性的,当线程销毁时,自然也可简单的将之前分配给线程的区域进行回收; 无需太关注这三个部分的垃圾回收 而对于 堆 方法区 这两个地方,有着很不一样的不确定性:类或者">
 <meta property="og:type" content="article">
 <meta property="og:title" content="(二)jvm 垃圾回收机制">
-<meta property="og:url" content="https://n1ck.cyou/2022/11/15/(%E4%BA%8C)jvm%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E6%9C%BA%E5%88%B6/index.html">
+<meta property="og:url" content="https://n1ck.cyou/2022/11/15/jvm/(%E4%BA%8C)jvm%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E6%9C%BA%E5%88%B6/index.html">
 <meta property="og:site_name" content="n!Ck playground">
 <meta property="og:description" content="jvm 那些地方需要垃圾回收对于 程序计数器 虚拟机栈 本地方法栈 这三个地方,随着线程的创建而产生,又随着线程的销毁而灭; 里面的数据随着线程的执行能够保证符合预期,且这些结构在类结构确定下来之后就能随之敲定 这三个区域的回收是具有确定性的,当线程销毁时,自然也可简单的将之前分配给线程的区域进行回收; 无需太关注这三个部分的垃圾回收 而对于 堆 方法区 这两个地方,有着很不一样的不确定性:类或者">
 <meta property="og:locale" content="en_US">
@@ -452,7 +452,7 @@
   <div class="license-box my-3">
     <div class="license-title">
       <div>(二)jvm 垃圾回收机制</div>
-      <div>https://n1ck.cyou/2022/11/15/(二)jvm 垃圾回收机制/</div>
+      <div>https://n1ck.cyou/2022/11/15/jvm/(二)jvm 垃圾回收机制/</div>
     </div>
     <div class="license-meta">
       
@@ -496,7 +496,7 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2022/11/15/(%E4%B8%89)jvm%20%E7%B1%BB%E5%8A%A0%E8%BD%BD%E8%BF%87%E7%A8%8B/" title="(三)jvm 类加载过程">
+                      <a href="/2022/11/15/jvm/(%E4%B8%89)jvm%20%E7%B1%BB%E5%8A%A0%E8%BD%BD%E8%BF%87%E7%A8%8B/" title="(三)jvm 类加载过程">
                         <i class="iconfont icon-arrowleft"></i>
                         <span class="hidden-mobile">(三)jvm 类加载过程</span>
                         <span class="visible-mobile">Previous</span>
@@ -506,7 +506,7 @@
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2022/11/15/(%E4%B8%80)jvm%20%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B/" title="(一)jvm 内存模型">
+                      <a href="/2022/11/15/jvm/(%E4%B8%80)jvm%20%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B/" title="(一)jvm 内存模型">
                         <span class="hidden-mobile">(一)jvm 内存模型</span>
                         <span class="visible-mobile">Next</span>
                         <i class="iconfont icon-arrowright"></i>
