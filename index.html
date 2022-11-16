@@ -288,6 +288,73 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2022/11/15/(%E4%BA%94)jvm%20java%20%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B/" target="_self">
+          <img src="/img/java.png" srcset="/img/loading.gif" lazyload alt="(五)jvm java 内存模型">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2022/11/15/(%E4%BA%94)jvm%20java%20%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B/" target="_self">
+          (五)jvm java 内存模型
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt " href="/2022/11/15/(%E4%BA%94)jvm%20java%20%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B/" target="_self">
+        <div>
+          java 内存模型java 内存模型主要关注的线程访问程序当中各种变量的规则,主要是在虚拟机主存中把变量读出放到内存当中,以及把内存当中的变量写入到虚拟机的主存里 java 内存模型规定所有的变量都存储于 主存 当中,每个工作线程还有自己私有的工作内存空间; 每个线程只能访问和操作自己工作内存空间的变量和数据,不允许直接操作主存当中的变量和数据;不同的工作线程之间也不允许互相访问其他线程的工作内存
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-11-15 17:27" pubdate>
+              2022-11-15
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/jvm/" class="category-chain-item">jvm</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/jvm/">#jvm</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+      <div class="col-12 col-md-4 m-auto index-img">
         <a href="/2022/11/15/(%E4%B8%89)jvm%20%E7%B1%BB%E5%8A%A0%E8%BD%BD%E8%BF%87%E7%A8%8B/" target="_self">
           <img src="/img/java.png" srcset="/img/loading.gif" lazyload alt="(三)jvm 类加载过程">
         </a>
@@ -783,73 +850,6 @@
             <i class="iconfont icon-date"></i>
             <time datetime="2022-11-13 10:45" pubdate>
               2022-11-13
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3 d-flex align-items-center">
-            <i class="iconfont icon-category"></i>
-            
-
-<span class="category-chains">
-  
-  
-    
-      <span class="category-chain">
-        
-  <a href="/categories/redis/" class="category-chain-item">redis</a>
-  
-  
-
-      </span>
-    
-  
-</span>
-
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/redis/">#redis</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-      <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/12/redis/(%E5%8D%81%E4%B8%80)redis%20%E7%BC%93%E5%AD%98%E6%B7%98%E6%B1%B0%E7%AD%96%E7%95%A5/" target="_self">
-          <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(十一)redis 缓存淘汰策略">
-        </a>
-      </div>
-    
-    <article class="col-12 col-md-8 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2022/11/12/redis/(%E5%8D%81%E4%B8%80)redis%20%E7%BC%93%E5%AD%98%E6%B7%98%E6%B1%B0%E7%AD%96%E7%95%A5/" target="_self">
-          (十一)redis 缓存淘汰策略
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt " href="/2022/11/12/redis/(%E5%8D%81%E4%B8%80)redis%20%E7%BC%93%E5%AD%98%E6%B7%98%E6%B1%B0%E7%AD%96%E7%95%A5/" target="_self">
-        <div>
-          redis 的缓存淘汰机制想要淘汰一个缓存,有两步关键的步骤  通过一定的策略,选出 需要被淘汰 的缓存 在合适的时机,将这些缓存从内存里删除  一旦 redis 实例配置好整体缓存的大小之后,除非是只读缓存否则总会发生缓存被写满的那一刻 而淘汰缓存就必须要解决上面两个问题:如何选?什么时候删? redis 缓存淘汰策略(解决如何选问题)redis 在 4.0 以后提供了 8 种缓存淘汰策略  不
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2022-11-12 20:21" pubdate>
-              2022-11-12
             </time>
           </div>
         
