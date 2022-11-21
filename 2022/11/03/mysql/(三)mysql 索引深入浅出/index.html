@@ -25,7 +25,7 @@
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="https://n1ck.cyou/img/mysql.png">
 <meta property="article:published_time" content="2022-11-03T14:31:40.000Z">
-<meta property="article:modified_time" content="2022-11-09T01:15:35.029Z">
+<meta property="article:modified_time" content="2022-11-21T02:36:52.144Z">
 <meta property="article:author" content="n!Ck">
 <meta property="article:tag" content="mysql">
 <meta name="twitter:card" content="summary_large_image">
@@ -331,7 +331,7 @@
 <p>而非聚簇索引上的查询,则必须要先通过字段列查找到主键 id,然后再通过主键 id 去查找对应的数据,需要 2 次索引树的访问</p>
 <p>对于非聚簇索引上的第二次查找主键 id 的过程,称为 <strong>回表</strong></p>
 <p>由于回表多了一次索引树的查找,所以尽可能使用聚簇索引来完成数据检索</p>
-<h3 id="索引覆盖"><a href="#索引覆盖" class="headerlink" title="索引覆盖"></a>索引覆盖</h3><p>假设存在如下 sql 语句,会执行多少次查询</p>
+<h3 id="覆盖索引"><a href="#覆盖索引" class="headerlink" title="覆盖索引"></a>覆盖索引</h3><p>假设存在如下 sql 语句,会执行多少次查询</p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> <span class="hljs-keyword">table</span> <span class="hljs-keyword">where</span> k <span class="hljs-keyword">between</span> <span class="hljs-number">3</span> <span class="hljs-keyword">and</span> <span class="hljs-number">5</span><br></code></pre></td></tr></table></figure>
 
 <ol>
@@ -349,13 +349,13 @@
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> k <span class="hljs-keyword">from</span> <span class="hljs-keyword">table</span> <span class="hljs-keyword">where</span> k <span class="hljs-keyword">between</span> <span class="hljs-number">3</span> <span class="hljs-keyword">and</span> <span class="hljs-number">5</span><br></code></pre></td></tr></table></figure>
 
 <p>此时 <code>select</code> 语句后面只需要查询 <code>k</code> 字段列即可,通过在 k 上面的普通索引,已经包含查询的所有信息了,此时无需再回表查询其他数据</p>
-<p>这种 <strong>索引列 k 已经覆盖查询请求</strong> 的现象,称为 <strong>索引覆盖</strong></p>
-<p><strong>索引覆盖能够有效的减少回表查询的次数,因此是一种提升性能的常用手段</strong></p>
+<p>这种 <strong>索引列 k 已经覆盖查询请求</strong> 的现象,称为 <strong>覆盖索引</strong></p>
+<p><strong>覆盖索引能够有效的减少回表查询的次数,因此是一种提升性能的常用手段</strong></p>
 <p><em>存储引擎和 Server 层的数据扫描统计</em></p>
-<p>需要注意的是,在上面 <strong>索引覆盖</strong> 的查询过程当中</p>
+<p>需要注意的是,在上面 <strong>覆盖索引</strong> 的查询过程当中</p>
 <p>存储引擎实际扫描了 3 次,即 k&#x3D;3,&#x3D;5,&#x3D;6 然后返回数据 k&#x3D;3 和 k&#x3D;5</p>
 <p>而对于 Serve 层来说,它只从存储引擎哪里拿到了 2 条记录,所以 Server 层认为实际扫描行数只有 2 条</p>
-<h4 id="联合索引通过索引覆盖来提高查询效率"><a href="#联合索引通过索引覆盖来提高查询效率" class="headerlink" title="联合索引通过索引覆盖来提高查询效率"></a>联合索引通过索引覆盖来提高查询效率</h4><p>考虑如下场景,对于每个学生来说,都有 <code>学号</code>, <code>姓名</code>, <code>年龄</code>,</p>
+<h4 id="联合索引通过覆盖索引来提高查询效率"><a href="#联合索引通过覆盖索引来提高查询效率" class="headerlink" title="联合索引通过覆盖索引来提高查询效率"></a>联合索引通过覆盖索引来提高查询效率</h4><p>考虑如下场景,对于每个学生来说,都有 <code>学号</code>, <code>姓名</code>, <code>年龄</code>,</p>
 <p>通常来说,通过 <code>学号</code> 已经能够唯一定位到一个学生,因此一般都选择在 <code>学号</code> 上建立主键索引</p>
 <p>在 <code>姓名</code> 上,也创建普通索引</p>
 <p>此时查询所有姓张的同学的 <code>姓名</code> 和 <code>年龄</code></p>
@@ -364,7 +364,7 @@
 <p>此时是能通过 <code>姓名</code> 的索引找到所有姓张的主键 id,在通过主键 id 得到完整的数据行,最后取出 <code>姓名</code> 和 <code>年龄</code> 返回结果</p>
 <p>若存在大量的这种查询,则 <strong>回表</strong> 会明显的拖慢查询的性能</p>
 <p>若在 <code>姓名</code> 和 <code>年龄</code> 上建立联合索引 <code>name_age</code> 则查询就会变为在索引 <code>name_age</code> 里面查找姓张的同学和年龄,而索引 <code>name_age</code> 正好又包含了查询所需要的数据,此时就不用发生 <strong>回表</strong> 查询</p>
-<p>这样的联合索引,通过 <strong>索引覆盖</strong> 实现了性能的优化和提升</p>
+<p>这样的联合索引,通过 <strong>覆盖索引</strong> 实现了性能的优化和提升</p>
 <h4 id="联合索引的-“最左匹配原则”-和-“最左前缀原则”"><a href="#联合索引的-“最左匹配原则”-和-“最左前缀原则”" class="headerlink" title="联合索引的 “最左匹配原则” 和 “最左前缀原则”"></a>联合索引的 “最左匹配原则” 和 “最左前缀原则”</h4><p><strong>定义:在联合索引列上,从左左侧的字段开始一直向右匹配索引,直到遇到范围查询(&gt;,&lt;,between,like),此时停止对后面的索引列的匹配</strong></p>
 <p><strong>定义:最左匹配原则同样也满足最左前缀原则</strong></p>
 <p>即对于索引 <code>name, age</code> 来说, 查询 <code>name like (&#39;张%)</code> 也能够用上索引</p>
@@ -383,7 +383,7 @@
 <p>上面 2 条 sql 语句,mysql 的优化器会自动调整字段的位置,从而使用上联合索引加快查询速度</p>
 <p><strong>总结</strong></p>
 <p>根据 <strong>空间</strong> 来决定是否需要在联合索引上,为那些不满足 <strong>最左匹配原则</strong> 的字段列再次单独建立联合索引或者单独的索引</p>
-<p>即是否又需要建立 <code>(b,d)</code> 或者 <code>(c)</code> 这样的联合索引或者单独索引,这取决于查询的频率以及是否满足 <strong>索引覆盖</strong> 来优化查询</p>
+<p>即是否又需要建立 <code>(b,d)</code> 或者 <code>(c)</code> 这样的联合索引或者单独索引,这取决于查询的频率以及是否满足 <strong>覆盖索引</strong> 来优化查询</p>
 <h3 id="索引下沉-也称为索引下推"><a href="#索引下沉-也称为索引下推" class="headerlink" title="索引下沉(也称为索引下推)"></a>索引下沉(也称为索引下推)</h3><p>对于那些不满足 <strong>最左匹配原则</strong> 的查询,用不上索引的字段列究竟如何完成检索</p>
 <p>考虑如下 sql ,同时有联合索引 <code>(name, age)</code></p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs sql"><span class="hljs-keyword">select</span> <span class="hljs-operator">*</span> <span class="hljs-keyword">from</span> students <span class="hljs-keyword">where</span> name <span class="hljs-keyword">like</span> <span class="hljs-string">&#x27;张%&#x27;</span> <span class="hljs-keyword">and</span> age <span class="hljs-operator">=</span> <span class="hljs-number">15</span><br></code></pre></td></tr></table></figure>
@@ -405,7 +405,7 @@
 <p>而对于使用索引下沉的优化来说,在检索联合索引 <code>(name,age)</code> 的时候,存储引擎就预先将 <code>age</code> 不满足条件的记录过滤掉; 将本来在 Server 层做的操作下沉到存储引擎层</p>
 <p>这样最终需要回表的操作就只有 2 次了,减少了回表的次数,提高查询的性能</p>
 <p><strong>索引下沉的条件,索引列中包含有待查询的字段,这样可以提前放到存储引擎来判断索引条件是否满足查询条件</strong></p>
-<p>如果查询的是 <code>name</code> 和 <code>gender</code> ,由于索引列里面不包含 <code>gender</code> 即使将 <code>gender = 1</code>下沉到存储引擎,也无法通过索引覆盖得到 <code>gender</code> 值,还是需要依次回表查询才行</p>
+<p>如果查询的是 <code>name</code> 和 <code>gender</code> ,由于索引列里面不包含 <code>gender</code> 即使将 <code>gender = 1</code>下沉到存储引擎,也无法通过覆盖索引得到 <code>gender</code> 值,还是需要依次回表查询才行</p>
 <p>此时就失去了索引下沉的优化</p>
 
                 

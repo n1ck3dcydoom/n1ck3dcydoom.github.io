@@ -16,24 +16,24 @@
   <meta name="author" content="n!Ck">
   <meta name="keywords" content="">
   
-    <meta name="description" content="日志模块 redo log 和 binlogredo log首先明确一点: mysql 是 先写日志,再写磁盘  这个和 redis 的 先写磁盘,再写日志 正好相反 mysql 写 前日志 ,redis 写 后日志 在存储引擎内,任何更新操作都会先记录 redo log 后,并更新内存数据,然后再适当的时候将 redo log 的数据回写到磁盘里 由此可知 redo log 是存储引擎持有的 r">
+    <meta name="description" content="底层数据结构 jdk 1.7 及以前采用 数组 + 链表 jdk 1.8 及以后采用 数组 + 红黑树  为什么选用红黑树对于查找性能来说,链表的时间复杂度是 O(n) 而红黑树的平均查找时间复杂度为 O(logn) 什么时候是链表,什么时候选用红黑树当链表节点个数超过 8 个以后,如果总节点个数超过 64 个,会变为 红黑树; 如果不足 64 个,此时会触发扩容操作 为什么回转节点个数为 6 而">
 <meta property="og:type" content="article">
-<meta property="og:title" content="(一)mysql 日志系统">
-<meta property="og:url" content="https://n1ck.cyou/2022/11/02/mysql/(%E4%B8%80)mysql%20%E6%97%A5%E5%BF%97%E7%B3%BB%E7%BB%9F/index.html">
+<meta property="og:title" content="(一)hashmap 夺命连环问">
+<meta property="og:url" content="https://n1ck.cyou/2022/11/16/(%E4%B8%80)hashmap%20%E5%A4%BA%E5%91%BD%E8%BF%9E%E7%8E%AF%E9%97%AE/index.html">
 <meta property="og:site_name" content="n!Ck playground">
-<meta property="og:description" content="日志模块 redo log 和 binlogredo log首先明确一点: mysql 是 先写日志,再写磁盘  这个和 redis 的 先写磁盘,再写日志 正好相反 mysql 写 前日志 ,redis 写 后日志 在存储引擎内,任何更新操作都会先记录 redo log 后,并更新内存数据,然后再适当的时候将 redo log 的数据回写到磁盘里 由此可知 redo log 是存储引擎持有的 r">
+<meta property="og:description" content="底层数据结构 jdk 1.7 及以前采用 数组 + 链表 jdk 1.8 及以后采用 数组 + 红黑树  为什么选用红黑树对于查找性能来说,链表的时间复杂度是 O(n) 而红黑树的平均查找时间复杂度为 O(logn) 什么时候是链表,什么时候选用红黑树当链表节点个数超过 8 个以后,如果总节点个数超过 64 个,会变为 红黑树; 如果不足 64 个,此时会触发扩容操作 为什么回转节点个数为 6 而">
 <meta property="og:locale" content="en_US">
-<meta property="og:image" content="https://n1ck.cyou/img/mysql.png">
-<meta property="article:published_time" content="2022-11-02T14:25:39.000Z">
-<meta property="article:modified_time" content="2022-11-21T02:12:19.233Z">
+<meta property="og:image" content="https://n1ck.cyou/img/java.png">
+<meta property="article:published_time" content="2022-11-16T06:44:12.000Z">
+<meta property="article:modified_time" content="2022-11-21T02:05:27.253Z">
 <meta property="article:author" content="n!Ck">
-<meta property="article:tag" content="mysql">
+<meta property="article:tag" content="jvm">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://n1ck.cyou/img/mysql.png">
+<meta name="twitter:image" content="https://n1ck.cyou/img/java.png">
   
   
   
-  <title>(一)mysql 日志系统 - n!Ck playground</title>
+  <title>(一)hashmap 夺命连环问 - n!Ck playground</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -198,7 +198,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="(一)mysql 日志系统"></span>
+            <span id="subtitle" data-typed-text="(一)hashmap 夺命连环问"></span>
           
         </div>
 
@@ -209,8 +209,8 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2022-11-02 22:25" pubdate>
-          November 2, 2022 pm
+        <time datetime="2022-11-16 14:44" pubdate>
+          November 16, 2022 pm
         </time>
       </span>
     
@@ -221,7 +221,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          2.7k words
+          2.2k words
         
       </span>
     
@@ -232,7 +232,7 @@
         
         
         
-          23 mins
+          19 mins
         
       </span>
     
@@ -270,95 +270,63 @@
         <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
-            <h1 style="display: none">(一)mysql 日志系统</h1>
+            <h1 style="display: none">(一)hashmap 夺命连环问</h1>
             
             
               <div class="markdown-body">
                 
-                <h2 id="日志模块-redo-log-和-binlog"><a href="#日志模块-redo-log-和-binlog" class="headerlink" title="日志模块 redo log 和 binlog"></a>日志模块 redo log 和 binlog</h2><h3 id="redo-log"><a href="#redo-log" class="headerlink" title="redo log"></a>redo log</h3><p>首先明确一点: mysql 是 <strong>先写日志,再写磁盘</strong>  这个和 redis 的 <strong>先写磁盘,再写日志</strong> 正好相反</p>
-<p>mysql 写 <strong>前日志</strong> ,redis 写 <strong>后日志</strong></p>
-<p>在存储引擎内,任何更新操作都会先记录 <code>redo log</code> 后,并更新内存数据,然后再适当的时候将 <code>redo log</code> 的数据回写到磁盘里</p>
-<p>由此可知 <code>redo log</code> 是存储引擎持有的</p>
-<h3 id="redo-log-组成"><a href="#redo-log-组成" class="headerlink" title="redo log 组成"></a>redo log 组成</h3><p>实际上 <code>redo log</code> 也是由两个部分组成</p>
-<ol>
-<li>redo log buffer</li>
-<li>redo log file</li>
+                <h3 id="底层数据结构"><a href="#底层数据结构" class="headerlink" title="底层数据结构"></a>底层数据结构</h3><ol>
+<li>jdk 1.7 及以前采用 <code>数组</code> + <code>链表</code></li>
+<li>jdk 1.8 及以后采用 <code>数组</code> + <code>红黑树</code></li>
 </ol>
-<p>这也是为了解决内存和磁盘读写速率不一致的问题</p>
-<p>所以 mysql 也需要提供一定的机制,保证将 <code>redo log buffer</code> 缓冲里面的数据,刷新到 <code>redo log file</code> 磁盘里持久化</p>
-<p>mysql 运行在用户态,要想真正写入磁盘,必须通过 <code>os</code> 提供的 <code>os buffer</code> 进入内核态调用 <code>fsync()</code> 才能写入磁盘</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7qp5h2r8mj30ca0a4tau.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
-<p>mysql 提供 3 种写入 redo log 的配置</p>
-<ol>
-<li>延时写:不会在事务提交时写入 <code>redo log</code>,而是每秒写入 <code>os buffer</code> 后在调用 <code>fsync()</code> 刷盘,发生宕机时会丢失大概 1s 的数据</li>
-<li>实时写,实时刷:事务提交后,写入 <code>os buffer</code> 立即刷新到磁盘,性能低,但是数据可靠性最高,即使宕机也不会丢数据</li>
-<li>实时写,延时刷:事务提交后,写入 <code>os buffer</code> 每隔 1s 中左右刷新磁盘,发生宕机会丢失大概 1s 的数据</li>
+<h3 id="为什么选用红黑树"><a href="#为什么选用红黑树" class="headerlink" title="为什么选用红黑树"></a>为什么选用红黑树</h3><p>对于查找性能来说,链表的时间复杂度是 <code>O(n)</code> 而红黑树的平均查找时间复杂度为 <code>O(logn)</code></p>
+<h3 id="什么时候是链表-什么时候选用红黑树"><a href="#什么时候是链表-什么时候选用红黑树" class="headerlink" title="什么时候是链表,什么时候选用红黑树"></a>什么时候是链表,什么时候选用红黑树</h3><p>当链表节点个数超过 8 个以后,如果总节点个数超过 64 个,会变为 <code>红黑树</code>; 如果不足 64 个,此时会触发扩容操作</p>
+<h3 id="为什么回转节点个数为-6-而不是-8"><a href="#为什么回转节点个数为-6-而不是-8" class="headerlink" title="为什么回转节点个数为 6 而不是 8"></a>为什么回转节点个数为 6 而不是 8</h3><p>如果说超过 8 个就将链表转化为红黑树,小于 8 个就将红黑树退化为链表; 如果节点个数在 8 个上下反复发生变化,此时的转化开销非常大,严重影响 <code>hashmap</code> 的性能</p>
+<p>所以将回转节点的个数设置为 6 个就是为了避免反复转化</p>
+<h3 id="为什么转为红黑树的条件是节点个数大于-8-个-而不是其他数字"><a href="#为什么转为红黑树的条件是节点个数大于-8-个-而不是其他数字" class="headerlink" title="为什么转为红黑树的条件是节点个数大于 8 个,而不是其他数字"></a>为什么转为红黑树的条件是节点个数大于 8 个,而不是其他数字</h3><p>因为红黑树节点个数小于 8 个的时候,其查找性能与链表差不多,体现不出红黑树的优势; 而且一个红黑树节点要保存的信息远比链表节点多,差不多在 2 倍左右,在小于 8 个节点的时候,查找性能相差无几但是要付出 2 倍的空间消耗,这是不划算的</p>
+<h3 id="hashmap-的关键属性有哪些"><a href="#hashmap-的关键属性有哪些" class="headerlink" title="hashmap 的关键属性有哪些"></a>hashmap 的关键属性有哪些</h3><ol>
+<li>size: 保存了键值对的个数</li>
+<li>threshold: 扩容阈值,当 size 达到 threshold 时,触发 <code>hashmap</code> 的扩容机制</li>
+<li>loadFactory: 负载因子,默认值为 <code>0.75</code></li>
 </ol>
-<p>整个 <code>redo log</code> 的数据结构类似以个环形数组,通过两个指针 <code>write_pos</code> 和 <code>check_point</code> 来记录读写进度</p>
-<p><code>write_pos</code> 记录当前已经写入的位置,随着新数据到来, <code>write_pos</code> 指针会不停地往后移动</p>
-<p><code>check_point</code> 记录当前正要落盘的位置,每次将数据落盘之后,<code>check_point</code> 也会往后移动</p>
-<p>如果新数据的写入速度,超过了落盘的速度,导致 <code>write_pos</code> 和 <code>check_point</code> 相遇了</p>
-<p>此时就需要暂停新数据的写入,先将一部分数据落盘后,空出来的 <code>redo log</code> 空间才允许新数据写入</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7qp577ek3j30ll0cx764.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
-<p>这样,当事务提交后,由于 mysql 写前日志的特性,即使还没来得及完成刷盘操作,也能通过 <code>redo log</code> 的 <code>check_point</code> 之后保存记录来恢复事务</p>
-<h3 id="binlog"><a href="#binlog" class="headerlink" title="binlog"></a>binlog</h3><p>在存储引擎有 <code>redo log</code> 的存在,在 Server 层自然也有对应的 <code>binlog</code> 来记录日志</p>
-<p>对比下 <code>redo log</code> 和 <code>binlog</code> 的不同点</p>
-<ol>
-<li><code>redo log</code> 写物理日志, <code>binlog</code> 写逻辑日志<br>物理日志就是记录磁盘页的操作:在第 <code>x</code> 页磁盘,偏移量为 <code>y</code> 的位置,写入 <code>z</code> 个字节</li>
+<h3 id="threshold-除了是扩容阈值以外还有什么作用"><a href="#threshold-除了是扩容阈值以外还有什么作用" class="headerlink" title="threshold 除了是扩容阈值以外还有什么作用"></a>threshold 除了是扩容阈值以外还有什么作用</h3><p><code>threshold</code> 会在初始化之前保存默认的大小 16,为了不必要的空间浪费, <code>hashmap</code> 会在第一次插入数据的时候才进行初始化,在这之前都是空的</p>
+<h3 id="hashmap-如何计算每次扩容后的大小"><a href="#hashmap-如何计算每次扩容后的大小" class="headerlink" title="hashmap 如何计算每次扩容后的大小"></a>hashmap 如何计算每次扩容后的大小</h3><figure class="highlight excel"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs excel">static final <span class="hljs-built_in">int</span> tableSizeFor(<span class="hljs-built_in">int</span> cap) &#123;<br>    <span class="hljs-built_in">int</span> <span class="hljs-built_in">n</span> = cap - <span class="hljs-number">1</span>;<br>    <span class="hljs-built_in">n</span> |= <span class="hljs-built_in">n</span> &gt;&gt;&gt; <span class="hljs-number">1</span>;<br>    <span class="hljs-built_in">n</span> |= <span class="hljs-built_in">n</span> &gt;&gt;&gt; <span class="hljs-number">2</span>;<br>    <span class="hljs-built_in">n</span> |= <span class="hljs-built_in">n</span> &gt;&gt;&gt; <span class="hljs-number">4</span>;<br>    <span class="hljs-built_in">n</span> |= <span class="hljs-built_in">n</span> &gt;&gt;&gt; <span class="hljs-number">8</span>;<br>    <span class="hljs-built_in">n</span> |= <span class="hljs-built_in">n</span> &gt;&gt;&gt; <span class="hljs-number">16</span>;<br>    return (<span class="hljs-built_in">n</span> &lt; <span class="hljs-number">0</span>) ? <span class="hljs-number">1</span> <span class="hljs-symbol">:</span> (<span class="hljs-built_in">n</span> &gt;= MAXIMUM_CAPACITY) ? MAXIMUM_CAPACITY <span class="hljs-symbol">:</span> <span class="hljs-built_in">n</span> + <span class="hljs-number">1</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>如何理解,明确一点计算新的大小,其实就是为了找到下一个 2 的 n 次幂,而 2 的次方在二进制表示里面只有 1 个 1,所以算法就是为了找到这个 1 的位置</p>
+<p>首先跳过第一行的 <code>cap - 1</code>,假如输入的 n 二进制表达把首位的 1 留下,其他低位全部用 x 表示忽略,即 <code>1xxxxxxxxx</code></p>
+<p>向右无符号移动 1 位得到 <code>01xxxxxx</code> 和原来的 n 值做 <code>|</code> 或运算,其效果相当于给前 2 位赋值 1,即 <code>n = 011xxxxxxxxx</code></p>
+<p>同理向右无符号 2 位得到 <code>00011xxxxxxx</code> 和原来的 n 值继续做或运算,相当于给前 4 位赋值 1,即 <code>n = 0001111xxxxxxxx</code></p>
+<p>重复移位 4 次,得到的结果是前 8 位全部为 1; 重复移位 8 次,得到的结果是前 16 位全部为 1; 重复移位 16 次,得到的结果是前 32 位全部为 1</p>
+<p>这里 1 的个数取决于输入的 n,当某次移位超过 n 原来的 1 之后,在做或运算也不会有影响了</p>
+<p>经过 5 步运算后,会得到一个高位全是 0,低位全是 1,并且大于 n 的数,最后 <code>n+1</code> 就会返回一个 2 的幂次并且是大于 n 的下一个 2 的幂</p>
+<p>回到第一行 <code>cap - 1</code> 则是为了防止 cap 本身就已经是 2 的幂次的情况</p>
+<h3 id="计算-key-在数组当中的位置如何确定的"><a href="#计算-key-在数组当中的位置如何确定的" class="headerlink" title="计算 key 在数组当中的位置如何确定的"></a>计算 key 在数组当中的位置如何确定的</h3><figure class="highlight excel"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs excel"><span class="hljs-built_in">index</span> = (<span class="hljs-built_in">n</span> - <span class="hljs-number">1</span>) &amp; hash<br></code></pre></td></tr></table></figure>
+
+<p>当 n 是 2 的幂次时,上述计算结果等于 <code>index = hash % n</code> 而且位运算的效率远高于取模运算 <code>%</code></p>
+<h3 id="插入元素时如何计算-hash-值"><a href="#插入元素时如何计算-hash-值" class="headerlink" title="插入元素时如何计算 hash 值"></a>插入元素时如何计算 hash 值</h3><figure class="highlight processing"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs processing"><span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-type">int</span> <span class="hljs-title function_">hash</span>(<span class="hljs-built_in">Object</span> <span class="hljs-built_in">key</span>) &#123;<br>    <span class="hljs-type">int</span> h;<br>    <span class="hljs-title function_">return</span> (<span class="hljs-built_in">key</span> == <span class="hljs-literal">null</span>) ? <span class="hljs-number">0</span> : (h = <span class="hljs-built_in">key</span>.<span class="hljs-property">hashCode</span>()) ^ (h &gt;&gt;&gt; <span class="hljs-number">16</span>);<br></code></pre></td></tr></table></figure>
+
+<p>取 <code>key</code> 的 <code>hashCode</code> 向右移 16 位和做异或运算</p>
+<p>为什么要和高 16 位做异或运算?</p>
+<p>考虑到计算 hash 数组位置的公式 <code>(n - 1) &amp; hash</code>, 如果 n 值很小,例如只有 4 的时候, <code>n - 1</code> 仅仅只有 3 位,此时 hash 值只有第三位参与了运算</p>
+<p>这增大了 hash 冲突的概率,而让高 16 位于低位进行异或运算后,右移补充的 0 异或运算结果不变,此时高 16 位与低 16 位的异或运算会进一步打乱低位的值</p>
+<p>这样的做法就是为了避免 n 值较小的时候,发生 hash 冲突的概率</p>
+<h3 id="hashmap-的扩容过程"><a href="#hashmap-的扩容过程" class="headerlink" title="hashmap 的扩容过程"></a>hashmap 的扩容过程</h3><p>扩容时,会创建一个原来数组容量一倍的新数组,并将原来数组中的值重新计算 hash 值后插入新的数组</p>
+<p>因为容量永远是 2 的幂次,对于一个 <code>key</code> 重新通过 <code>(n - 1) &amp; hash</code> 过后,这里的 <code>(n - 1)</code> 比扩容前的 <code>(n - 1)</code> 首位多了个 1 出来</p>
+<p>这时如果 <code>key</code> 的哈希值在这个多出来的位也是 1,那么新的位置就是原来位置 + 扩容 n 过后的值; 如果多出来的位是 0,则位置不变</p>
+<p>这样在做扩容的时候,就可以把原来可能产生 hash 冲突的的 <code>key</code> 再次放到不同的哈希桶里了</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h87u14p6tqj30q307haej.jpg" srcset="/img/loading.gif" lazyload alt="img.png"></p>
+<h3 id="扩容过程-1-7-和-1-8-的差异"><a href="#扩容过程-1-7-和-1-8-的差异" class="headerlink" title="扩容过程 1.7 和 1.8 的差异"></a>扩容过程 1.7 和 1.8 的差异</h3><p>1.7 在扩容的时候采用头插法</p>
+<p>1.8 在扩容的时候采用尾插法,避免了链表出现环的问题</p>
+<p>例如线程 A 插入节点 B,线程 B 插入节点 A,当线程 A 完成插入后触发 <code>rehash</code> 此时线程 B 需要重新放置节点 B 的位置,根据头插法则产生了环</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h87u1e6fzqj30is0biaea.jpg" srcset="/img/loading.gif" lazyload alt="img_1.png"></p>
+<h3 id="线程安全的-map-集合"><a href="#线程安全的-map-集合" class="headerlink" title="线程安全的 map 集合"></a>线程安全的 map 集合</h3><ol>
+<li>HashTable 线程安全,对整个 hash 数组加锁,并发度低</li>
+<li>ConcurrentHashMap 线程安全,对单个哈希桶加锁,并发度相对较高</li>
 </ol>
-<p><code>binlog</code> 写逻辑日志,也就是说 <code>binlog</code> 记录的是每一条实际操作的 sql 语句<br>由于 <code>redo log</code> 写的是物理日志,其记录了磁盘操作的本质,在数据恢复上就比逻辑日志的 <code>binlog</code> 快很多</p>
-<ol start="2">
-<li><code>redo log</code> 是类似环形数组的循环写入,有固定的大小</li>
-</ol>
-<p>而 <code>binlog</code> 则是顺序追加写入文件,这样记录了所有操作过的 sql 语句</p>
-<p><code>redo log</code> 的大小固定,不可能无限制地写入日志,所以 <code>check_point</code> 保证了在其之前的数据都是已经刷入磁盘的</p>
-<p>不会保存历史记录,相对于 <code>binlog</code> 而言,节省了很多空间</p>
-<p>同时由于 <code>binlog</code> 一直追加写,并没有什么标志位能够得知哪条记录之前的 sql 是已经刷入磁盘的,在做数据恢复的时候,难以定位哪些还未刷盘的日志</p>
-<p>而 <code>redo log</code> 通过 <code>check point</code> 可以很方便的找到未刷盘的日志位置,从而进行数据恢复</p>
-<ol start="3">
-<li><code>redo log</code> 是存储引擎 innoDB 独有的,<code>binlog</code> 是 mysql Server 层持有的,跟存储引擎无关</li>
-</ol>
-<h3 id="两阶段提交"><a href="#两阶段提交" class="headerlink" title="两阶段提交"></a>两阶段提交</h3><p>以 <code>slq = 为 id = 2 的记录 c 值加 1</code> 为例,看看 mysql 具体的执行过程</p>
-<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h7qp5x282nj30cs0hkdik.jpg" srcset="/img/loading.gif" lazyload alt="img_2.png"></p>
-<ol>
-<li><p>经过连接器,抛开查询缓存不谈,完成语法分析和分析,经过优化器来到执行器后</p>
-</li>
-<li><p>首先执行器调用存储引擎的接口检索 <code>id=2</code> 的记录,检查记录是否存在于 <code>buffer pool</code> 当中,若命中则直接执行器,否则将会从磁盘里面读出数据所在的 <strong>页</strong> 放入内存当中</p>
-</li>
-<li><p>执行器拿到 <code>id=2</code> 的记录后,对其 <code>c</code> 值完成加 1 操作后,在调用存储引擎的接口将其写入内存</p>
-</li>
-<li><p>存储引擎将更新后的数据写入内存后,立即写入 <code>redo log buffer</code> 当中,此时 <code>redo log</code> 处于 <code>prepare</code> 状态,然后返回到执行器</p>
-</li>
-<li><p>执行器接收到存储引擎完成数据写入后的响应,则记录当前 sql 到 <code>binlog</code> 里面,然后再调用存储引擎提交事务</p>
-</li>
-<li><p>存储引擎接收到执行器提交事务后的请求后,将刚刚 <code>redo log</code> 当中的 <code>prepare</code> 状态更新为 <code>commit</code></p>
-</li>
-</ol>
-<p>可以看到整个过程当中,<code>redo log</code> 分别在不同的时期处于两种不同的状态,这个特性被称作 mysql 的 <code>两阶段提交</code></p>
-<p>为何一个事务在写 <code>redo log</code> 的时候有两次操作,这个需要结合 <code>binlog</code> 解释下当事务提交时发生宕机后,如果通过 <code>binlog</code> 和 <code>redo log</code> 完成数据恢复</p>
-<h4 id="mysql-数据恢复时的规则"><a href="#mysql-数据恢复时的规则" class="headerlink" title="mysql 数据恢复时的规则"></a>mysql 数据恢复时的规则</h4><ol>
-<li>若 <code>redo log</code> 里面有 <code>commit</code> 记录,则直接提交当前事务</li>
-<li>若 <code>redo log</code> 有 <code>prepare</code> 记录,则检查 <code>binlog</code> 是否有事务 <code>commit</code> 记录. 若 <code>binlog</code> 也有,则提交当前事务;若 <code>binlog</code> 没有,则回滚当前事务</li>
-</ol>
-<h4 id="如果先写-redo-log-再写-binlog"><a href="#如果先写-redo-log-再写-binlog" class="headerlink" title="如果先写 redo log 再写 binlog"></a>如果先写 redo log 再写 binlog</h4><p>若数据更新后,<code>redo log</code> 已经完成写入,此时再写入 <code>binlog</code> 发生宕机</p>
-<p>在恢复数据的时候,检查到 <code>redo log</code> 里面已经有事务的 <code>commit</code> 记录,此时应该提交当前事务到数据库</p>
-<p>此时主库完成事务提交, <code>c</code> 值已经被更新为 2</p>
-<p>但是由于 <code>binlog</code> 没有记录,导致通过 <code>binlog</code> 同步到从库时,从库缺少了当前事务,从而导致主备的数据不一致</p>
-<h4 id="如果先写-binlog-再写-redo-log"><a href="#如果先写-binlog-再写-redo-log" class="headerlink" title="如果先写 binlog 再写 redo log"></a>如果先写 binlog 再写 redo log</h4><p>若数据更新后先写入 <code>binlog</code>, 此时再写入 <code>redo log</code> 时发生宕机</p>
-<p>在数据恢复的时候,检查 <code>redo log</code> 没有事务的 <code>commit</code> 的记录,从而主库缺少了当前事务的记录</p>
-<p>而从库因为从 <code>binlog</code> 当中同步到了更新的事务,这也导致了主备的数据不一致</p>
-<h4 id="两阶段提交如何避免发生宕机后数据恢复时主备数据不一致的问题"><a href="#两阶段提交如何避免发生宕机后数据恢复时主备数据不一致的问题" class="headerlink" title="两阶段提交如何避免发生宕机后数据恢复时主备数据不一致的问题"></a>两阶段提交如何避免发生宕机后数据恢复时主备数据不一致的问题</h4><ol>
-<li><code>redo log prepare</code> 之后,写 <code>binlog</code> 之前宕机</li>
-</ol>
-<p>恢复数据时,检查到 <code>redo log</code> 有 <code>prepare</code> 的事务,再去检查 <code>binlong</code> 的情况,发现 <code>binlog</code> 里面没有记录事务</p>
-<p>此时需要回滚 <code>redo log</code> 里面的事务,即主库回滚未提交的事务</p>
-<p>这样主备之间通过 <code>binlog</code> 同步时,都没有宕机前未提交的事务,保证主备之间的数据一致性</p>
-<ol start="2">
-<li><code>binlog</code> 完成,写 <code>redo log commit</code> 时宕机</li>
-</ol>
-<p>数据恢复时,检查到 <code>redo log</code> 有 <code>prepare</code> 记录,再去检查 <code>binlog</code> 的情况,发现 <code>binlog</code> 里面也有事务的记录</p>
-<p>此时需要将 <code>redo log prepare</code> 修改为 <code>commit</code>,将 <code>binlog</code> 里面记录的事务提交到主库</p>
-<p>这样从库因为已经从主库同步了 <code>binlog</code> 执行了最新的事务,但是主库由于宕机导致事务没有提交,所以这时候检查后需要将 <code>binlog</code> 里面的时候重新在主库提交一遍,这样保证主备之间的数据一致性</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h87u19lr96j30ke0dgjy5.jpg" srcset="/img/loading.gif" lazyload alt="img_2.png"></p>
+<p><code>ConcurrentHashMap</code> 的 <code>CAS</code> 操作</p>
+<p>当初始化哈希桶的时候,此时的并发安全由 <code>CAS</code> 提供</p>
+<p><img src="https://tva1.sinaimg.cn/large/008vK57jgy1h87u1iswolj30hb02jwg9.jpg" srcset="/img/loading.gif" lazyload alt="img_3.png"></p>
 
                 
               </div>
@@ -377,7 +345,7 @@
     
       <span class="category-chain">
         
-  <a href="/categories/mysql/" class="category-chain-item">mysql</a>
+  <a href="/categories/jvm/" class="category-chain-item">jvm</a>
   
   
 
@@ -392,7 +360,7 @@
     <div class="post-meta">
       <i class="iconfont icon-tags"></i>
       
-        <a href="/tags/mysql/">#mysql</a>
+        <a href="/tags/jvm/">#jvm</a>
       
     </div>
   
@@ -404,8 +372,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>(一)mysql 日志系统</div>
-      <div>https://n1ck.cyou/2022/11/02/mysql/(一)mysql 日志系统/</div>
+      <div>(一)hashmap 夺命连环问</div>
+      <div>https://n1ck.cyou/2022/11/16/(一)hashmap 夺命连环问/</div>
     </div>
     <div class="license-meta">
       
@@ -417,7 +385,7 @@
       
         <div class="license-meta-item license-meta-date">
           <div>Posted on</div>
-          <div>November 2, 2022</div>
+          <div>November 16, 2022</div>
         </div>
       
       
@@ -449,18 +417,12 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2022/11/03/mysql/(%E4%BA%8C)mysql%20%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E5%8E%9F%E7%90%86/" title="(二)mysql 事务隔离原理">
-                        <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">(二)mysql 事务隔离原理</span>
-                        <span class="visible-mobile">Previous</span>
-                      </a>
-                    
                   </article>
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2022/10/31/gin/gin%E7%9A%84%E4%BA%8C%E6%AC%A1%E5%BC%80%E5%8F%91/" title="gin 的二次开发">
-                        <span class="hidden-mobile">gin 的二次开发</span>
+                      <a href="/2022/11/16/jvm/(%E5%85%AD)jvm%20%E9%94%81%E5%92%8C%E5%B9%B6%E5%8F%91%E9%97%AE%E9%A2%98/" title="(六)jvm 锁和并发问题">
+                        <span class="hidden-mobile">(六)jvm 锁和并发问题</span>
                         <span class="visible-mobile">Next</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>

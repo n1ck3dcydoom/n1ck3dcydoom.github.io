@@ -221,6 +221,73 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2022/11/16/(%E4%B8%80)hashmap%20%E5%A4%BA%E5%91%BD%E8%BF%9E%E7%8E%AF%E9%97%AE/" target="_self">
+          <img src="/img/java.png" srcset="/img/loading.gif" lazyload alt="(一)hashmap 夺命连环问">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2022/11/16/(%E4%B8%80)hashmap%20%E5%A4%BA%E5%91%BD%E8%BF%9E%E7%8E%AF%E9%97%AE/" target="_self">
+          (一)hashmap 夺命连环问
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt " href="/2022/11/16/(%E4%B8%80)hashmap%20%E5%A4%BA%E5%91%BD%E8%BF%9E%E7%8E%AF%E9%97%AE/" target="_self">
+        <div>
+          底层数据结构 jdk 1.7 及以前采用 数组 + 链表 jdk 1.8 及以后采用 数组 + 红黑树  为什么选用红黑树对于查找性能来说,链表的时间复杂度是 O(n) 而红黑树的平均查找时间复杂度为 O(logn) 什么时候是链表,什么时候选用红黑树当链表节点个数超过 8 个以后,如果总节点个数超过 64 个,会变为 红黑树; 如果不足 64 个,此时会触发扩容操作 为什么回转节点个数为 6 而
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-11-16 14:44" pubdate>
+              2022-11-16
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/jvm/" class="category-chain-item">jvm</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/jvm/">#jvm</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+      <div class="col-12 col-md-4 m-auto index-img">
         <a href="/2022/11/16/jvm/(%E5%85%AD)jvm%20%E9%94%81%E5%92%8C%E5%B9%B6%E5%8F%91%E9%97%AE%E9%A2%98/" target="_self">
           <img src="/img/java.png" srcset="/img/loading.gif" lazyload alt="(六)jvm 锁和并发问题">
         </a>
@@ -782,73 +849,6 @@
           <div class="post-meta mr-3">
             <i class="iconfont icon-date"></i>
             <time datetime="2022-11-13 20:43" pubdate>
-              2022-11-13
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3 d-flex align-items-center">
-            <i class="iconfont icon-category"></i>
-            
-
-<span class="category-chains">
-  
-  
-    
-      <span class="category-chain">
-        
-  <a href="/categories/redis/" class="category-chain-item">redis</a>
-  
-  
-
-      </span>
-    
-  
-</span>
-
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/redis/">#redis</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-      <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/13/redis/(%E5%8D%81%E4%B8%89)redis%20%E5%8E%9F%E5%AD%90%E6%80%A7%E9%97%AE%E9%A2%98/" target="_self">
-          <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(十三)redis 原子性问题">
-        </a>
-      </div>
-    
-    <article class="col-12 col-md-8 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2022/11/13/redis/(%E5%8D%81%E4%B8%89)redis%20%E5%8E%9F%E5%AD%90%E6%80%A7%E9%97%AE%E9%A2%98/" target="_self">
-          (十三)redis 原子性问题
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt " href="/2022/11/13/redis/(%E5%8D%81%E4%B8%89)redis%20%E5%8E%9F%E5%AD%90%E6%80%A7%E9%97%AE%E9%A2%98/" target="_self">
-        <div>
-          并发场景下如何保证正确性并发读取一个数据不需要额外考虑,因为本身读操作之间是共享的 并发写一个数据则需要考虑互斥问题,同一时间对于同一个数据来说只能有一个线程进行写操作,其他线程都必须等待; 不然就会导致严重的并发问题  例如这个例子,线程 A 和线程 B 同时更新一个库存值,由于并没有任何额外的并发控制,导致最终的数据表现和预期不一致 这是由于线程对库存的可以拆分为 3 个子步骤:  获取当前的
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2022-11-13 16:56" pubdate>
               2022-11-13
             </time>
           </div>

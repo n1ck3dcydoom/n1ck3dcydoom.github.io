@@ -221,6 +221,73 @@
     
     
       <div class="col-12 col-md-4 m-auto index-img">
+        <a href="/2022/11/10/redis/(%E4%B8%89)redis%20%E6%8C%81%E4%B9%85%E5%8C%96%E6%9C%BA%E5%88%B6/" target="_self">
+          <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(三)redis 持久化机制">
+        </a>
+      </div>
+    
+    <article class="col-12 col-md-8 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2022/11/10/redis/(%E4%B8%89)redis%20%E6%8C%81%E4%B9%85%E5%8C%96%E6%9C%BA%E5%88%B6/" target="_self">
+          (三)redis 持久化机制
+        </a>
+      </h1>
+
+      
+      <a class="index-excerpt " href="/2022/11/10/redis/(%E4%B8%89)redis%20%E6%8C%81%E4%B9%85%E5%8C%96%E6%9C%BA%E5%88%B6/" target="_self">
+        <div>
+          redis 的持久化机制由于 redis 是内存型数据库,当 redis 实例发生异常宕机时,其内存里面的数据将会全部丢失; 所以 redis 也需要通过持久化操作来避免异常宕机导致的数据丢失问题发生 redis 提供了 3 种持久化方式:  AOF 日志 RDB 内存快照 MIX 两者的混合模式  AOF 日志mysql 也有写日志,而且 mysql 的特性是写 前日志 也就是说在实际的数据写入
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2022-11-10 09:25" pubdate>
+              2022-11-10
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3 d-flex align-items-center">
+            <i class="iconfont icon-category"></i>
+            
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/redis/" class="category-chain-item">redis</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/redis/">#redis</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+      <div class="col-12 col-md-4 m-auto index-img">
         <a href="/2022/11/10/redis/(%E4%BA%8C)redis%20%E4%B8%BA%E4%BB%80%E4%B9%88%E5%BF%AB/" target="_self">
           <img src="/img/redis.png" srcset="/img/loading.gif" lazyload alt="(二)redis 为什么快">
         </a>
@@ -782,73 +849,6 @@
           <div class="post-meta mr-3">
             <i class="iconfont icon-date"></i>
             <time datetime="2022-11-05 20:26" pubdate>
-              2022-11-05
-            </time>
-          </div>
-        
-        
-          <div class="post-meta mr-3 d-flex align-items-center">
-            <i class="iconfont icon-category"></i>
-            
-
-<span class="category-chains">
-  
-  
-    
-      <span class="category-chain">
-        
-  <a href="/categories/mysql/" class="category-chain-item">mysql</a>
-  
-  
-
-      </span>
-    
-  
-</span>
-
-          </div>
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/mysql/">#mysql</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-      <div class="col-12 col-md-4 m-auto index-img">
-        <a href="/2022/11/05/mysql/(%E4%B9%9D)mysql%20order%20by%20%E5%8E%9F%E7%90%86%E7%BB%86%E8%8A%82/" target="_self">
-          <img src="/img/mysql.png" srcset="/img/loading.gif" lazyload alt="(九)mysql order by 原理细节">
-        </a>
-      </div>
-    
-    <article class="col-12 col-md-8 mx-auto index-info">
-      <h1 class="index-header">
-        
-        <a href="/2022/11/05/mysql/(%E4%B9%9D)mysql%20order%20by%20%E5%8E%9F%E7%90%86%E7%BB%86%E8%8A%82/" target="_self">
-          (九)mysql order by 原理细节
-        </a>
-      </h1>
-
-      
-      <a class="index-excerpt " href="/2022/11/05/mysql/(%E4%B9%9D)mysql%20order%20by%20%E5%8E%9F%E7%90%86%E7%BB%86%E8%8A%82/" target="_self">
-        <div>
-          order by假设有一张城市表,记录了城市里面每个人的名字,你年龄的信息 现在需要对城市是 杭州 的所有人,按照年龄排序后返回前 1000 人 1select city,name,age from t where city=&#x27;杭州&#x27; order by name limit 999;  全字段排序为了避免扫描全表,很自然的在 where 语句查询的字段 city 上加上索引
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2022-11-05 16:29" pubdate>
               2022-11-05
             </time>
           </div>

@@ -25,7 +25,7 @@
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="https://n1ck.cyou/img/mysql.png">
 <meta property="article:published_time" content="2022-11-07T05:18:25.000Z">
-<meta property="article:modified_time" content="2022-11-09T01:15:35.036Z">
+<meta property="article:modified_time" content="2022-11-21T05:03:26.087Z">
 <meta property="article:author" content="n!Ck">
 <meta property="article:tag" content="mysql">
 <meta name="twitter:card" content="summary_large_image">
@@ -306,7 +306,7 @@
 </ul>
 </li>
 </ol>
-<p>每个实力都维护了一个 <code>GTID</code> 集合,用来记录 <strong>当前实例已经执行过的所有事务</strong></p>
+<p>每个实例都维护了一个 <code>GTID</code> 集合,用来记录 <strong>当前实例已经执行过的所有事务</strong></p>
 <p>举个简单的例子:</p>
 <p>假设实例 X 已经插入了数据 <code>(1,1)</code> 且 <code>binlog</code> 里面记录的实例 X 的 <code>insert</code> 语句之前有一条 <code>SET</code> 语句,为这个事务设置了 <code>GTID=xxx</code></p>
 <p>实例 X 是实例 Y 的从库,而且主库 Y 也插入了一条记录 <code>(1,1)</code> 且 <code>binlog</code> 里面 <code>insert</code> 语句之前也有一条 <code>SET</code> 语句,为这个事务设置了 <code>GTID=yyy</code></p>

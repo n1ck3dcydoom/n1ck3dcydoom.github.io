@@ -25,7 +25,7 @@
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="https://n1ck.cyou/img/mysql.png">
 <meta property="article:published_time" content="2022-11-04T08:41:17.000Z">
-<meta property="article:modified_time" content="2022-11-09T01:15:35.008Z">
+<meta property="article:modified_time" content="2022-11-21T03:05:26.108Z">
 <meta property="article:author" content="n!Ck">
 <meta property="article:tag" content="mysql">
 <meta name="twitter:card" content="summary_large_image">
@@ -335,7 +335,7 @@
 <p>如果这个时候有另外一个客户也在商家这里购买东西,那么这也是 <code>update</code> 操作,且和前面的 1,2 步骤 <code>update</code> 的是同一个账户</p>
 <p>为了使都操作账户 B 带来的并发等待最小,第一个客户应当对步骤进行重新排序,例如 3,1,2 这样把存在锁竞争的步骤 2 放到了最后面,这样第一个客户持有账户 B 的锁时间被降低到了最短,尽可能地降低锁导致的并发问题的影响</p>
 <h4 id="死锁"><a href="#死锁" class="headerlink" title="死锁"></a>死锁</h4><p>什么是死锁: 当并发系统中几个线程出现 <strong>循环等待</strong> 资源,涉及到的线程都在等待别人释放自己需要的资源,且 <strong>一直等待</strong> 下去的现象,称为死锁</p>
-<p>死锁发生的 3 个必要条件:</p>
+<p>死锁发生的 4 个必要条件:</p>
 <ol>
 <li>互斥条件:一个资源只能被一个线程使用,其他线程只能等待释放</li>
 <li>请求和保持:一个线程请求其他互斥资源时,不会释放自己手里的资源</li>
