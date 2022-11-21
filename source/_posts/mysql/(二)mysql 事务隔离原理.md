@@ -84,7 +84,7 @@ mysql 在每条记录发生操作之前,都会提前记录一个 **回滚段** �
 第二部分则是构成回滚链的关键点,包含两个值
 
 1. trx_id: myslq 会为每一个事务分配一个 long 类型的唯一 id,这个 id 是递增的
-2. roll_point: 这是一个只想 undo log 类型的指针,指向上一个旧数据版本的 undo log
+2. roll_point: 这是一个指向 undo log 类型的指针,指向上一个旧数据版本的 undo log
 
 对于一个事务(trx_id = 10)来说,在某一时刻操作数据,就会产生一条 trx_id = 10,且 roll_point 指向上一个数据的 undo log
 

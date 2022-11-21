@@ -54,6 +54,6 @@ mysql 为了尽可能的提高一次刷盘的组大小,采用最简单的办法 
 
 两阶段提交: 存储引擎更新 `buffer pool` 里面的数据,写入 `redo log` 为 `prepare` 状态, 返回 `Server` 将记录写入 `binlog` 后提交事务, 存储引擎写入 `redo log` 为 `commit`
 
-为了尽可能的利用组提交,mysql 实际上将 `binlog` 写入 `os buffer` 这一步提前,放到 `热到 log` 刷入 `prepare` 之后
+为了尽可能的利用组提交,mysql 实际上将 `binlog` 写入 `os buffer` 这一步提前,放到 `redo log` 刷入 `prepare` 之后
 
 ![img_1.png](https://tva1.sinaimg.cn/large/008vK57jgy1h7vjf05oe6j30g50i9wiv.jpg)

@@ -74,7 +74,7 @@ set max_length_for_sort_date=16
 
 总的来说,mysql 体现了一个原则就是: 内存够用就要尽可能利用内存,减少磁盘的访问
 
-### 使用索引覆盖来加速排序过程
+### 使用覆盖索引来加速排序过程
 
 如果查询的列天然有序,则可以进一步提高 `order by` 语句的效率
 
@@ -84,7 +84,7 @@ set max_length_for_sort_date=16
 
 ![img_5.png](https://tva1.sinaimg.cn/large/008vK57jgy1h7ugt8teb7j30lq08xacf.jpg)
 
-如果在 `city`, `name`, `age` 三个字段上建立联合索引,这样检索的时候,索引树里面就已经全部包含了所有需要查询的数据,而且自然有序,这样的索引覆盖还能再减少一次回表查询即可返回结果集
+如果在 `city`, `name`, `age` 三个字段上建立联合索引,这样检索的时候,索引树里面就已经全部包含了所有需要查询的数据,而且自然有序,这样的覆盖索引还能再减少一次回表查询即可返回结果集
 
 ![img_6.png](https://tva1.sinaimg.cn/large/008vK57jgy1h7ugtf3quvj30he09cmyt.jpg)
 
